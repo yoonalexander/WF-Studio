@@ -97,21 +97,37 @@ test("sound wheel and expanded choices change real audio while keeping one conti
       analyser.disconnect();
       return { fundamental, ratio: 10 ** ((third - fundamental) / 20) };
     });
+  await expect
+    .poll(async () => (await state()).frequency)
+    .toBeCloseTo(261.626, 0);
   const start = await state();
   expect(start.type).toBe("sawtooth");
   const lead = await harmonics();
   expect(lead.fundamental).toBeGreaterThan(-50);
   expect(lead.ratio).toBeGreaterThan(0.1);
   await page.getByRole("button", { name: "Next sound", exact: true }).click();
+  await expect(status).toHaveText("Sound: Deep electro");
+  await expect
+    .poll(async () => (await state()).frequency)
+    .toBeCloseTo(start.frequency / 2, 0);
+  expect((await state()).type).toBe("sawtooth");
+  const deep = await harmonics();
+  expect(deep.fundamental).toBeGreaterThan(-50);
+  expect(deep.ratio).toBeGreaterThan(0.1);
+  await page.getByRole("button", { name: "Next sound", exact: true }).click();
   await expect(status).toHaveText("Sound: Pulse lead");
   await expect.poll(async () => (await state()).type).toBe("square");
+  await page
+    .getByRole("button", { name: "Previous sound", exact: true })
+    .click();
+  await expect(status).toHaveText("Sound: Deep electro");
   await page
     .getByRole("button", { name: "Previous sound", exact: true })
     .click();
   await expect(status).toHaveText("Sound: Electro lead");
   await page.locator(".sound-wheel").hover();
   await page.mouse.wheel(0, 120);
-  await expect(status).toHaveText("Sound: Pulse lead");
+  await expect(status).toHaveText("Sound: Deep electro");
   await page
     .getByRole("button", { name: "Previous sound", exact: true })
     .press("ArrowUp");

@@ -11,6 +11,17 @@ export const sounds = [
     octave: 0,
   },
   {
+    id: "deep-electro",
+    name: "Deep electro",
+    description: "Electro lead, one octave deeper",
+    waveform: "sawtooth",
+    cutoff: 3600,
+    resonance: 0.7,
+    drive: 1.7,
+    level: 0.12,
+    octave: -12,
+  },
+  {
     id: "pulse",
     name: "Pulse lead",
     description: "Crisp, square-wave synth",
