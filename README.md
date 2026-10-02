@@ -2,7 +2,7 @@
 
 **Write equations. Hear the math.** A web-first, local-first math music studio built from the supplied design document and the two reference videos.
 
-[Open the live studio](https://wf-studio-blue.vercel.app) · [Verified CI run](https://github.com/yoonalexander/WF-Studio/actions/runs/36974021195)
+[Open the live studio](https://wfstudio.alexyoon.com) · [Verified CI run](https://github.com/yoonalexander/WF-Studio/actions/runs/36974021195)
 
 ## Run
 

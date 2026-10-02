@@ -27,7 +27,7 @@ The README records supported syntax, mapping semantics, resource/export limits a
 
 ## Production handoff
 
-- Live application: https://wf-studio-blue.vercel.app
+- Live application: https://wfstudio.alexyoon.com
 - Vercel project: `yoonalexanders-projects/wf-studio`, existing Hobby account, Vite preset, no environment variables.
 - Application source commit: `6f51695e1c31f8ac4b7ff2eb796fe14a9243b8a7` on `main`.
 - GitHub Actions run `36974021195`: completed successfully, including unit tests, production build and all six browser workflows on Linux.
