@@ -1706,6 +1706,12 @@ body:has(.simple-app) {
   padding: 28px 40px;
   gap: 20px;
 }
+.simple-wordmark small {
+  margin-left: 8px;
+  font-size: 10px;
+  color: #737373;
+  font-weight: 400;
+}
 .simple-wordmark {
   font-size: 15px;
   font-weight: 500;
@@ -2125,6 +2131,96 @@ body:has(.simple-app) {
 }
 .view-switch {
   white-space: nowrap;
+}
+.equation-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: #fff;
+}
+.equation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 36px;
+  font-size: 13px;
+}
+.equation-header a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #737373;
+  font-size: 11px;
+  text-decoration: none;
+}
+.equation-playground {
+  width: min(100%, 1100px);
+  margin: auto;
+  padding: 0 32px 60px;
+}
+.equation-page .simple-graph {
+  height: clamp(220px, 55dvh, 530px);
+}
+.one-equation {
+  max-width: 850px;
+  margin: 10px auto 0;
+}
+.equation-edit {
+  display: block;
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 4px;
+  overflow-x: auto;
+}
+.equation-edit .katex-display {
+  margin: 0;
+}
+.equation-edit .katex {
+  font-size: 1.2em;
+}
+.equation-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 12px;
+  font-size: 10px;
+  color: #737373;
+}
+.equation-play {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  min-height: 36px;
+  color: #111;
+  font-size: 11px;
+}
+.equation-error {
+  font-size: 12px;
+  color: #a92c2c;
+  text-align: center;
+  margin-top: 12px;
+}
+@media (max-width: 650px) {
+  .equation-header {
+    padding: 20px 22px;
+  }
+  .equation-playground {
+    padding: 0 12px 36px;
+  }
+  .equation-page .simple-graph {
+    height: clamp(220px, 46dvh, 420px);
+  }
+  .one-equation {
+    padding: 0 14px;
+  }
+  .equation-edit .katex {
+    font-size: 1em;
+  }
+  .equation-page .equation-prefix {
+    font-size: 20px;
+  }
 }
 @media (min-width: 651px) and (max-height: 900px) {
   .simple-header {

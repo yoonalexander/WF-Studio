@@ -31,11 +31,13 @@ export function EquationEditor({
   onChange,
   symbols,
   simple = false,
+  autoFocus = false,
 }: {
   value: string;
   onChange: (v: string) => void;
   symbols: string[];
   simple?: boolean;
+  autoFocus?: boolean;
 }) {
   const root = useRef<HTMLDivElement>(null),
     view = useRef<EditorView | undefined>(undefined),
@@ -110,6 +112,7 @@ export function EquationEditor({
       }),
     });
     view.current = editor;
+    if (autoFocus) editor.focus();
     return () => {
       editor.destroy();
       view.current = undefined;

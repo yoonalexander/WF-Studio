@@ -23,6 +23,7 @@ export function saveProject(project: Project) {
   return saved;
 }
 export async function loadActive() {
+  await saveQueue.catch(() => {});
   const id = localStorage.getItem("wf-active");
   const data = id ? await db.projects.get(id) : undefined;
   return data ? validateProject(data) : undefined;

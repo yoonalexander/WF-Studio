@@ -3,7 +3,9 @@ import type { Project, Track } from "./model";
 import type { Curve, View } from "./graph-render";
 import type { MusicEvent } from "./music";
 
-export function compositionRange(project: Project) {
+export function compositionRange(project: Project, minimal = false) {
+  if (minimal)
+    return { start: -project.loop.endBeat, span: project.loop.endBeat * 2 };
   return project.loop.enabled
     ? {
         start: project.loop.startBeat,
@@ -11,7 +13,11 @@ export function compositionRange(project: Project) {
       }
     : { start: 0, span: project.lengthBeats };
 }
-export function fitComposition(project: Project, curves: Curve[]): View {
+export function fitComposition(
+  project: Project,
+  curves: Curve[],
+  minimal = false,
+): View {
   let min = 0,
     max = 0;
   for (const curve of curves) {
@@ -24,7 +30,7 @@ export function fitComposition(project: Project, curves: Curve[]): View {
   }
   const span = Math.max(2, max - min);
   return {
-    ...compositionRange(project),
+    ...compositionRange(project, minimal),
     yCenter: min / 2 + max / 2,
     ySpan: span * 1.25,
   };

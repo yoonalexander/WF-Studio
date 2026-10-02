@@ -11,11 +11,15 @@ export function Graph({
   onSeek,
   onError,
   simple = false,
+  minimal = false,
+  transport = audio,
 }: {
   playing: boolean;
   onSeek: (beat: number) => void;
   onError: (s: string) => void;
   simple?: boolean;
+  minimal?: boolean;
+  transport?: Pick<typeof audio, "position" | "soundingNotes">;
 }) {
   const project = useStudio((s) => s.project),
     selectedId = useStudio((s) => s.selectedId),
@@ -29,12 +33,28 @@ export function Graph({
     timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [view, setView] = useState<View>(() =>
       simple
-        ? fitComposition(project, [])
+        ? fitComposition(project, [], minimal)
         : { start: 0, span: 16, yCenter: 2, ySpan: 12 },
     ),
     [sampling, setSampling] = useState(false);
-  const state = useRef({ project, selectedId, view, playing, simple });
-  state.current = { project, selectedId, view, playing, simple };
+  const state = useRef({
+    project,
+    selectedId,
+    view,
+    playing,
+    simple,
+    minimal,
+    transport,
+  });
+  state.current = {
+    project,
+    selectedId,
+    view,
+    playing,
+    simple,
+    minimal,
+    transport,
+  };
   const factory = useRef<() => Worker>(() => {
     throw new Error("Worker is not initialized.");
   });
@@ -49,7 +69,13 @@ export function Graph({
         curves.current = e.data.samples;
         events.current = e.data.events ?? [];
         if (state.current.simple)
-          setView(fitComposition(state.current.project, curves.current));
+          setView(
+            fitComposition(
+              state.current.project,
+              curves.current,
+              state.current.minimal,
+            ),
+          );
         setSampling(false);
       };
       w.onerror = () => {
@@ -69,7 +95,7 @@ export function Graph({
     };
   }, [onError]);
   const equations = JSON.stringify(project.tracks);
-  const range = compositionRange(project);
+  const range = compositionRange(project, minimal);
   const sampleStart = simple ? range.start : view.start;
   const sampleSpan = simple ? range.span : view.span;
   const arrangement = JSON.stringify(project.sections);
@@ -84,7 +110,7 @@ export function Graph({
       start: sampleStart,
       span: sampleSpan,
       project,
-      simple,
+      simple: simple && !minimal,
       count: Math.min(1800, Math.max(600, canvas.current?.clientWidth ?? 900)),
     });
     clearTimeout(timer.current);
@@ -103,6 +129,7 @@ export function Graph({
     project.beatsPerBar,
     arrangement,
     simple,
+    minimal,
     onError,
   ]);
   useEffect(() => {
@@ -125,7 +152,9 @@ export function Graph({
         if (ctx) {
           ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
           const s = state.current;
-          const beat = Math.max(0, audio.position());
+          const beat = s.minimal
+            ? s.transport.position()
+            : Math.max(0, s.transport.position());
           drawGraph(
             ctx,
             rect.width,
@@ -138,7 +167,8 @@ export function Graph({
             s.selectedId,
             s.simple,
             events.current,
-            audio.soundingNotes(),
+            s.transport.soundingNotes(),
+            s.minimal,
           );
           if (
             s.playing &&
@@ -179,70 +209,74 @@ export function Graph({
       data-y-min={view.yCenter - view.ySpan / 2}
       data-y-max={view.yCenter + view.ySpan / 2}
     >
-      <div className="panel-heading">
-        {!simple && (
-          <div>
-            <span className="eyebrow">LIVE GRAPH</span>
-            <h2>Every curve has a voice.</h2>
-          </div>
-        )}
-        <div className="graph-actions">
-          <span className={`sample-state ${simple ? "sr-only" : ""}`}>
-            {sampling ? "Sampling…" : "x = beats"}
-          </span>
+      {!minimal && (
+        <div className="panel-heading">
           {!simple && (
-            <>
-              <button
-                className="icon-button"
-                aria-label="Zoom out"
-                onClick={() => zoom(1.5)}
-              >
-                <Minus size={16} />
-              </button>
-              <button
-                className="icon-button"
-                aria-label="Zoom in"
-                onClick={() => zoom(1 / 1.5)}
-              >
-                <Plus size={16} />
-              </button>
-              <button
-                className="icon-button"
-                aria-label="Reset graph view"
-                onClick={() =>
-                  setView({
-                    start: 0,
-                    span: 16,
-                    yCenter: 2,
-                    ySpan: 12,
-                  })
-                }
-              >
-                <Crosshair size={16} />
-              </button>
-            </>
+            <div>
+              <span className="eyebrow">LIVE GRAPH</span>
+              <h2>Every curve has a voice.</h2>
+            </div>
           )}
-          <button
-            className="icon-button"
-            aria-label="Fullscreen graph"
-            onClick={() => {
-              if (document.fullscreenElement) void document.exitFullscreen();
-              else
-                void shell.current
-                  ?.requestFullscreen()
-                  .catch(() => onError("Fullscreen is unavailable."));
-            }}
-          >
-            <Maximize2 size={16} />
-          </button>
+          <div className="graph-actions">
+            <span className={`sample-state ${simple ? "sr-only" : ""}`}>
+              {sampling ? "Sampling…" : "x = beats"}
+            </span>
+            {!simple && (
+              <>
+                <button
+                  className="icon-button"
+                  aria-label="Zoom out"
+                  onClick={() => zoom(1.5)}
+                >
+                  <Minus size={16} />
+                </button>
+                <button
+                  className="icon-button"
+                  aria-label="Zoom in"
+                  onClick={() => zoom(1 / 1.5)}
+                >
+                  <Plus size={16} />
+                </button>
+                <button
+                  className="icon-button"
+                  aria-label="Reset graph view"
+                  onClick={() =>
+                    setView({
+                      start: 0,
+                      span: 16,
+                      yCenter: 2,
+                      ySpan: 12,
+                    })
+                  }
+                >
+                  <Crosshair size={16} />
+                </button>
+              </>
+            )}
+            <button
+              className="icon-button"
+              aria-label="Fullscreen graph"
+              onClick={() => {
+                if (document.fullscreenElement) void document.exitFullscreen();
+                else
+                  void shell.current
+                    ?.requestFullscreen()
+                    .catch(() => onError("Fullscreen is unavailable."));
+              }}
+            >
+              <Maximize2 size={16} />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
       <canvas
         ref={canvas}
         aria-label={
-          simple
-            ? "All sounds and notes, automatically fitted to the full loop. Click to move the playhead."
-            : "Equation graph. Drag to pan; use zoom buttons. Click to move the playhead."
+          minimal
+            ? "Equation graph. The moving point follows the sustained sound. Click to move along the equation."
+            : simple
+              ? "All sounds and notes, automatically fitted to the full loop. Click to move the playhead."
+              : "Equation graph. Drag to pan; use zoom buttons. Click to move the playhead."
         }
         role="img"
         onPointerDown={(e) => {
@@ -277,9 +311,9 @@ export function Graph({
             const rect = e.currentTarget.getBoundingClientRect();
             onSeek(
               Math.max(
-                0,
+                minimal ? view.start : 0,
                 Math.min(
-                  project.lengthBeats,
+                  minimal ? view.start + view.span : project.lengthBeats,
                   view.start +
                     ((e.clientX - rect.left - 50) / (rect.width - 74)) *
                       view.span,

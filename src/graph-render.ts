@@ -45,6 +45,7 @@ export function drawGraph(
   simple = false,
   events: MusicEvent[] = [],
   sounding: MusicEvent[] = [],
+  minimal = false,
 ) {
   const theme = simple
       ? { bg: "#ffffff", grid: "#ffffff", axis: "#111111", text: "#111111" }
@@ -131,7 +132,7 @@ export function drawGraph(
   if (!simple) ctx.fillText("x / beats", width - pad.right, 16);
   ctx.textAlign = "left";
   if (!simple) ctx.fillText("f(x)", pad.left, 16);
-  if (simple) {
+  if (simple && !minimal) {
     ctx.font = '10px "Courier New", monospace';
     ctx.fillStyle = "#737373";
     const step = Math.max(1, 2 ** Math.ceil(Math.log2(view.span / 8)));
@@ -168,36 +169,40 @@ export function drawGraph(
       (isTrackActive(project, track, beat) &&
         (!simple || (track.volume > 0 && project.master > 0)));
     const rawColor = track?.color ?? "#f0e7ff";
-    const color = simple
-      ? track
-        ? simpleColor(track)
-        : "#111111"
-      : project.visuals.theme === "mono"
-        ? "#282832"
-        : project.visuals.theme === "light"
-          ? `#${[1, 3, 5]
-              .map((i) =>
-                Math.round(parseInt(rawColor.slice(i, i + 2), 16) * 0.58)
-                  .toString(16)
-                  .padStart(2, "0"),
-              )
-              .join("")}`
-          : rawColor;
+    const color = minimal
+      ? "#111111"
+      : simple
+        ? track
+          ? simpleColor(track)
+          : "#111111"
+        : project.visuals.theme === "mono"
+          ? "#282832"
+          : project.visuals.theme === "light"
+            ? `#${[1, 3, 5]
+                .map((i) =>
+                  Math.round(parseInt(rawColor.slice(i, i + 2), 16) * 0.58)
+                    .toString(16)
+                    .padStart(2, "0"),
+                )
+                .join("")}`
+            : rawColor;
     ctx.strokeStyle = color;
     ctx.lineWidth = simple
       ? 1.8
       : project.visuals.lineWidth + (track?.id === selectedId ? 0.4 : 0);
-    ctx.globalAlpha = simple
-      ? active
-        ? track?.id === selectedId
-          ? 0.9
-          : 0.55
-        : 0.15
-      : active
-        ? playing
-          ? 0.4
-          : 0.85
-        : 0.18;
+    ctx.globalAlpha = minimal
+      ? 1
+      : simple
+        ? active
+          ? track?.id === selectedId
+            ? 0.9
+            : 0.55
+          : 0.15
+        : active
+          ? playing
+            ? 0.4
+            : 0.85
+          : 0.18;
     if (!simple && (project.visuals.glow || project.visuals.theme === "neon")) {
       ctx.shadowColor = color;
       ctx.shadowBlur = 8;
@@ -278,7 +283,7 @@ export function drawGraph(
       ctx.lineWidth = 1.2;
       ctx.strokeStyle = color;
       // These circles use the same eventAt results as the audio scheduler.
-      for (const event of events.filter(
+      for (const event of (minimal ? [] : events).filter(
         (e) => e.trackId === track.id && e.velocity > 0,
       )) {
         if (!Number.isFinite(event.value) || track.volume === 0) continue;
@@ -288,7 +293,8 @@ export function drawGraph(
         ctx.stroke();
       }
       // Only voices that have actually reached their scheduled audio time light up.
-      for (const event of sounding.filter((e) => e.trackId === track.id)) {
+      const voices = sounding.filter((e) => e.trackId === track.id);
+      for (const event of minimal ? voices.slice(-1) : voices) {
         if (!Number.isFinite(event.value)) continue;
         ctx.globalAlpha = 1;
         ctx.fillStyle = color;
@@ -300,6 +306,7 @@ export function drawGraph(
   }
   ctx.globalAlpha = 1;
   if (
+    !minimal &&
     (playing || !simple) &&
     beat >= view.start &&
     beat <= view.start + view.span

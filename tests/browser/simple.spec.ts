@@ -5,7 +5,7 @@ test("simple view edits the same project, keeps playback running across views an
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.goto("/");
+  await page.goto("/studio");
   await expect(page.locator(".simple-app")).toBeVisible();
   await expect(page.locator(".tracks-panel")).toHaveCount(0);
   await expect(page.getByText("Saved on this device")).toBeAttached();
@@ -40,7 +40,7 @@ test("simple view edits the same project, keeps playback running across views an
   await expect(
     page.getByRole("button", { name: "Pause", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Detailed studio" }).click();
+  await page.getByRole("button", { name: "Detailed view" }).click();
   await expect(page.getByLabel("Equation expression")).toContainText("3.2");
   await expect(
     page.getByRole("button", { name: "Pause", exact: true }),
@@ -58,7 +58,7 @@ test("simple view edits the same project, keeps playback running across views an
   await page.reload();
   await expect(page.locator(".simple-app")).toBeVisible();
   await expect(page.getByLabel("Equation expression")).toContainText("sin(x)");
-  await page.getByRole("button", { name: "Detailed studio" }).click();
+  await page.getByRole("button", { name: "Detailed view" }).click();
   await page.reload();
   await expect(page.locator(".tracks-panel")).toBeVisible();
   expect(errors).toEqual([]);
@@ -68,7 +68,7 @@ test("simple view fits small screens, selects equations and handles an empty pro
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/");
+  await page.goto("/studio");
   await expect(page.getByText("Saved on this device")).toBeAttached();
   await page
     .getByRole("button", { name: "Select Bass B", exact: true })
@@ -92,7 +92,7 @@ test("simple view fits small screens, selects equations and handles an empty pro
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
-  await page.getByRole("button", { name: "Detailed studio" }).click();
+  await page.getByRole("button", { name: "Detailed view" }).click();
   await page.getByRole("button", { name: "Projects", exact: true }).click();
   await page.getByRole("button", { name: "New project", exact: true }).click();
   await page.getByRole("button", { name: "Simple view", exact: true }).click();
@@ -136,7 +136,7 @@ test("compose from scratch in simple mode, fit the whole loop and show actual os
       }
     };
   });
-  await page.goto("/");
+  await page.goto("/studio");
   await expect(page.getByText("Saved on this device")).toBeVisible();
   await page.getByRole("button", { name: "New song", exact: true }).click();
   await expect(page.getByLabel("Project name")).toHaveValue("My song");
@@ -260,7 +260,7 @@ test("compose from scratch in simple mode, fit the whole loop and show actual os
 test("examples explain every layer and imported sections stay visible until explicitly removed", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/studio");
   await expect(page.getByText("Saved on this device")).toBeVisible();
   for (const name of ["Modulo club", "Sine garden", "Piecewise playground"]) {
     await page.getByRole("button", { name: "Examples", exact: true }).click();
@@ -273,7 +273,7 @@ test("examples explain every layer and imported sections stay visible until expl
     await expect(page.getByText(/Starts at x/)).toHaveCount(0);
     await expect(page.getByText("Saved on this device")).toBeVisible();
   }
-  await page.getByRole("button", { name: "Detailed studio" }).click();
+  await page.getByRole("button", { name: "Detailed view" }).click();
   await page.getByRole("button", { name: "Examples", exact: true }).click();
   await page
     .getByRole("dialog")

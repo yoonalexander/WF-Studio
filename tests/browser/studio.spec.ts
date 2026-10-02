@@ -11,7 +11,7 @@ test("MVP workflow: compose, play, persist, export WAV/MIDI and recover imports"
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.goto("/");
+  await page.goto("/studio");
   await expect(page.getByText("Saved on this device")).toBeVisible();
   await page.getByRole("button", { name: "Dismiss welcome" }).click();
   await page.getByRole("button", { name: "Projects", exact: true }).click();
@@ -97,7 +97,7 @@ test("MVP workflow: compose, play, persist, export WAV/MIDI and recover imports"
 test("errors stay isolated, project undo/redo works, arrangement and themes are editable", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/studio");
   await expect(page.getByText("Saved on this device")).toBeVisible();
   await page.getByRole("button", { name: "Dismiss welcome" }).click();
   await page.getByLabel("Equation expression").fill('import("bad")');
@@ -142,7 +142,7 @@ test("mobile layout has no horizontal overflow and supports equation editing", a
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/");
+  await page.goto("/studio");
   await expect(page.getByText("Saved on this device")).toBeVisible();
   await page.getByRole("button", { name: "Dismiss welcome" }).click();
   await page.getByRole("button", { name: "Select Bass" }).click();
@@ -156,7 +156,7 @@ test("mobile layout has no horizontal overflow and supports equation editing", a
   await page.screenshot({ path: ".local/studio-mobile.png", fullPage: true });
 });
 test("video export includes real audio and video streams", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/studio");
   await expect(page.getByText("Saved on this device")).toBeVisible();
   await page.getByRole("button", { name: "Dismiss welcome" }).click();
   await page.getByLabel("Loop end beat").fill("4");
@@ -177,7 +177,7 @@ test("remix URLs round-trip and invalid imported projects preserve current work"
   page,
   context,
 }) => {
-  await page.goto("/");
+  await page.goto("/studio");
   await expect(page.getByText("Saved on this device")).toBeVisible();
   await page.getByRole("button", { name: "Export", exact: true }).click();
   await page
@@ -216,7 +216,7 @@ test("audio clock honors BPM, pause and loops; canvas dimensions stay stable", a
       }
     };
   });
-  await page.goto("/");
+  await page.goto("/studio");
   await expect(page.getByText("Saved on this device")).toBeVisible();
   await page.getByRole("button", { name: "Dismiss welcome" }).click();
   await page.getByLabel("BPM", { exact: true }).fill("120");

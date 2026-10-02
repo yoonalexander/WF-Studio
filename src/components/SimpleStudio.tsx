@@ -52,6 +52,7 @@ export function SimpleStudio({
   onSeek,
   onError,
   onDetailed,
+  onHome,
   onExamples,
   onHelp,
   onNew,
@@ -68,6 +69,7 @@ export function SimpleStudio({
   onError: (message: string) => void;
   onStop: () => void;
   onDetailed: () => void;
+  onHome: () => void;
   onExamples: () => void;
   onHelp: () => void;
   onNew: () => void;
@@ -120,7 +122,9 @@ export function SimpleStudio({
   return (
     <>
       <header className="simple-header">
-        <span className="simple-wordmark">Wave Function</span>
+        <span className="simple-wordmark">
+          Song studio <small>Simple</small>
+        </span>
         <input
           className="simple-song-name"
           aria-label="Project name"
@@ -133,12 +137,13 @@ export function SimpleStudio({
           }
         />
         <nav className="simple-navigation" aria-label="Song actions">
+          <button onClick={onHome}>One equation</button>
           <button onClick={onNew}>New song</button>
           <button onClick={onExamples}>Examples</button>
           <button onClick={onProjects}>Projects</button>
           <button onClick={onExport}>Export</button>
           <button className="simple-detail-switch" onClick={onDetailed}>
-            Detailed studio <ArrowUpRight size={15} />
+            Detailed view <ArrowUpRight size={15} />
           </button>
         </nav>
       </header>

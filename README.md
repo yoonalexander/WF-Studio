@@ -28,9 +28,11 @@ To test a deployed build, set `WF_BASE_URL` to its origin before running browser
 
 ## Create a composition
 
-The default **Simple view** is a complete composing workspace on white. The graph automatically fits every equation and the entire loop. Curves show equations, hollow circles show scheduled notes, and filled circles show audio voices currently playing. Every sound has a visible status, mute and solo controls. Use **New song**, **Add sound** and the equation input to build your own music, then choose the instrument, mapping, tempo, scale, note interval and tone. Projects and exports are available here too. The simple examples are eight-beat loops with no hidden section changes; existing arrangements keep their sections and label when each sound enters. **Detailed studio** opens the full arrangement and visual editor; both views edit the same project. Your view choice is remembered on this device.
+The main page is **one graph, one equation, one sustained sound** on white. Click the equation to edit it, then press Enter or Play. The equation controls the pitch of a single continuous sine oscillator without scale quantization or repeated note triggers: `y = 0` is C4 and an increase of 12 raises the pitch one octave. The moving dot follows the same AudioContext clock. The whole graph stays in one frame, with no zoom controls. Your equation is remembered independently from saved songs.
 
-1. Press Play on the starter composition, or open Projects → New project.
+**Song studio** at `/studio` contains both the **Simple view** and **Detailed view**. Simple provides the composing workspace: add/remove sounds, equations, instruments, mappings, timing, mute/solo, saving and exports. Its graph fits every layer and the full loop; hollow circles show scheduled notes and filled circles show voices playing. Detailed adds the full arrangement and visual editor. Both edit the same song, and the studio view choice is remembered. Existing arrangements and project libraries are preserved when moving between the studio and the one-equation page.
+
+1. Open Song studio, then press Play on the starter composition or create a new song/project.
 2. Add a Kick and enter `exp(-8 * (x mod 1))`. Event → Trigger detects the rising edge at 0.8.
 3. Add a Bass with `sequence(0, 0, -4, -2)`, mapped to pitch.
 4. Add a Lead and reference `B(x + 1) + 7`.
@@ -59,6 +61,8 @@ Local projects autosave to IndexedDB in this browser on this origin. **Project J
 `src/music.ts` maps the values to musical events. Both the live audio scheduler and exports use it. The same equation can drive pitch, thresholds, gain, cutoff, pan, or only graphics. The project model contains no Web Audio or library-specific objects.
 
 `src/audio.ts` schedules timestamps against AudioContext.currentTime on a 25 ms timer with a 120 ms horizon. Scheduling skips missed windows after suspension rather than bursting overdue notes. Edits re-anchor future scheduling and stop old voices. Native Web Audio is used instead of Tone.js to share the exact voice implementation with offline rendering and keep the dependency footprint smaller.
+
+`src/continuous-audio.ts` powers the main page with one sustained oscillator. It evaluates the equation every 16 ms, smoothly changes frequency, and keeps the graph point on the same audio clock. Invalid or undefined values fade to silence. Changing the equation retunes the existing oscillator rather than scheduling new notes. Pitch offsets are bounded to four octaves in either direction.
 
 `src/graph.worker.ts` samples bounded expressions away from the UI thread. `src/graph-render.ts` renders both studio and exported video. `src/storage.ts` serializes IndexedDB saves and validates imports with Zod. `src/store.ts` keeps persistent data separate from transport and undo history.
 

@@ -49,8 +49,37 @@ import { Timeline } from "./components/Timeline";
 import { Modal } from "./components/Modal";
 import { ExportDialog } from "./components/ExportDialog";
 import { SimpleStudio } from "./components/SimpleStudio";
+import { EquationPlayground } from "./components/EquationPlayground";
 
 export default function App() {
+  const [studio, setStudio] = useState(
+    () =>
+      location.pathname === "/studio" ||
+      location.pathname === "/studio/" ||
+      location.hash.startsWith("#project="),
+  );
+  useEffect(() => {
+    const navigate = () =>
+      setStudio(
+        location.pathname === "/studio" ||
+          location.pathname === "/studio/" ||
+          location.hash.startsWith("#project="),
+      );
+    window.addEventListener("popstate", navigate);
+    return () => window.removeEventListener("popstate", navigate);
+  }, []);
+  const navigate = (next: boolean) => {
+    history.pushState(null, "", next ? "/studio" : "/");
+    setStudio(next);
+  };
+  return studio ? (
+    <SongStudio onHome={() => navigate(false)} />
+  ) : (
+    <EquationPlayground onStudio={() => navigate(true)} />
+  );
+}
+
+function SongStudio({ onHome }: { onHome: () => void }) {
   const {
     project,
     selectedId,
@@ -92,6 +121,17 @@ export default function App() {
   const engine = useMemo(
     () => createMathEngine(project.tracks, project.beatsPerBar),
     [project.tracks, project.beatsPerBar],
+  );
+  const latestProject = useRef(project);
+  const canSave = useRef(false);
+  latestProject.current = project;
+  canSave.current = ready;
+  useEffect(
+    () => () => {
+      if (canSave.current)
+        void saveProject(latestProject.current).catch(() => {});
+    },
+    [],
   );
   const pause = useCallback(() => {
     audio.pause();
@@ -268,6 +308,15 @@ export default function App() {
       /* View still works without storage. */
     }
   };
+  const goHome = async () => {
+    pause();
+    try {
+      await saveProject(useStudio.getState().project);
+      onHome();
+    } catch {
+      notify("Save failed. Export your song before leaving the studio.");
+    }
+  };
   return (
     <div
       className={`app ${viewMode === "simple" ? "simple-app" : ""}`}
@@ -289,6 +338,7 @@ export default function App() {
           onSeek={seek}
           onError={notify}
           onDetailed={() => switchView("detailed")}
+          onHome={() => void goHome()}
           onExamples={() => setModal("examples")}
           onHelp={() => setModal("help")}
           onNew={() => void switchProject(newSimpleSong())}
@@ -308,7 +358,7 @@ export default function App() {
                 <Activity size={25} />
               </span>
               <span>
-                Wave Function<small>MATH MUSIC STUDIO</small>
+                Wave Function<small>SONG STUDIO · DETAILED</small>
               </span>
             </a>
             <div className="project-title">
@@ -328,6 +378,9 @@ export default function App() {
               </span>
             </div>
             <nav className="top-actions">
+              <button className="text-button" onClick={() => void goHome()}>
+                One equation
+              </button>
               <button
                 className="text-button view-switch"
                 onClick={() => switchView("simple")}
