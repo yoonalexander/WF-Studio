@@ -24,3 +24,12 @@ Headless Windows audio device clocks can advance more slowly than wall time; the
 Cloud accounts/storage/gallery, collaboration, sample upload, direct audio-rate Signal Mode, AudioWorklet DSP, continuous audio-rate modulation, camera keyframes, advanced effects/mastering and forced MP3/MP4 codecs remain later work. The spec labels these as advanced/later capabilities. Share links and project files provide a complete local sharing flow without adding a backend.
 
 The README records supported syntax, mapping semantics, resource/export limits and deployment instructions. Code changes are backed by GitHub Actions for unit, build and Chromium workflow checks.
+
+## Production handoff
+
+- Live application: https://wf-studio-blue.vercel.app
+- Vercel project: `yoonalexanders-projects/wf-studio`, existing Hobby account, Vite preset, no environment variables.
+- Application source commit: `6f51695e1c31f8ac4b7ff2eb796fe14a9243b8a7` on `main`.
+- GitHub Actions run `36974021195`: completed successfully, including unit tests, production build and all six browser workflows on Linux.
+- All six workflows also passed directly against the public Vercel deployment. Public HTML returned HTTP 200 with the expected studio title.
+- Original video files were preserved locally and were not uploaded as public site assets.
