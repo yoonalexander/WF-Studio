@@ -10,6 +10,11 @@ test("one equation is the default, with song studio isolated and saved songs pre
   await page.goto("/");
   await expect(page.locator(".equation-page")).toBeVisible();
   await expect(page.locator("canvas")).toHaveCount(1);
+  await expect
+    .poll(() =>
+      page.locator(".simple-graph").getAttribute("data-y-max").then(Number),
+    )
+    .toBeGreaterThan(4.9);
   await expect(page.getByRole("button", { name: "Add sound" })).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: "Examples", exact: true }),
@@ -208,6 +213,11 @@ test("the equation controls one sustained oscillator, without repeated note star
   ).toEqual({ starts: 1, stops: 1 });
   await page.getByLabel("Equation expression").fill("4 * sin(x * pi / 2)");
   await page.getByLabel("Equation expression").press("Escape");
+  await expect
+    .poll(() =>
+      page.locator(".simple-graph").getAttribute("data-y-max").then(Number),
+    )
+    .toBeGreaterThan(4.9);
   await page.screenshot({
     path: ".local/one-equation-desktop.png",
     fullPage: true,
