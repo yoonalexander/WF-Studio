@@ -1,5 +1,129 @@
 import { test, expect } from "@playwright/test";
 
+test("bounded branches edit, persist and sound only where the graph is defined", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const evidence = {
+      starts: 0,
+      gain: undefined as GainNode | undefined,
+      oscillator: undefined as OscillatorNode | undefined,
+    };
+    (window as unknown as { boundsAudio: typeof evidence }).boundsAudio =
+      evidence;
+    const Original = window.AudioContext;
+    window.AudioContext = class extends Original {
+      createGain() {
+        const node = super.createGain();
+        evidence.gain = node;
+        return node;
+      }
+      createOscillator() {
+        const node = super.createOscillator(),
+          start = node.start.bind(node);
+        evidence.oscillator = node;
+        node.start = (...args) => {
+          evidence.starts++;
+          start(...args);
+        };
+        return node;
+      }
+    };
+  });
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Edit equation", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Add bounds", exact: true }).click();
+  await page.getByLabel("Branch 1 expression", { exact: true }).fill("12");
+  await page.getByLabel("Branch 1 bound", { exact: true }).fill("-2 <= x < 0");
+  await page
+    .getByRole("button", { name: "Remove branch 2", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Add branch", exact: true }).click();
+  await page.getByLabel("Branch 2 expression", { exact: true }).fill("-12");
+  await page.getByLabel("Branch 2 bound", { exact: true }).fill("1 <= x < 3");
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  for (const width of [1366, 320]) {
+    await page.setViewportSize({ width, height: width === 1366 ? 768 : 720 });
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(width);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollHeight),
+    ).toBeLessThanOrEqual(width === 1366 ? 768 : 720);
+    await expect(
+      page.getByLabel("Branch 2 bound", { exact: true }),
+    ).toBeVisible();
+  }
+  await page.getByLabel("Branch 2 bound", { exact: true }).press("Enter");
+  await expect(page.getByLabel("Rendered equation")).toContainText("if");
+  await expect(page.getByLabel("Rendered equation")).not.toContainText(
+    "otherwise",
+  );
+  await page.getByRole("button", { name: "Play", exact: true }).click();
+  const gain = () =>
+    page.evaluate(
+      () =>
+        (window as unknown as { boundsAudio: { gain: GainNode } }).boundsAudio
+          .gain.gain.value,
+    );
+  const frequency = () =>
+    page.evaluate(
+      () =>
+        (window as unknown as { boundsAudio: { oscillator: OscillatorNode } })
+          .boundsAudio.oscillator.frequency.value,
+    );
+  await expect.poll(gain).toBeLessThan(0.001); // x = 0 is outside both bounds.
+  const canvas = page.locator("canvas"),
+    box = (await canvas.boundingBox())!;
+  const seek = async (x: number) =>
+    canvas.click({
+      position: { x: 50 + ((x + 4) / 8) * (box.width - 74), y: box.height / 2 },
+    });
+  await seek(-1);
+  await expect.poll(gain).toBeGreaterThan(0.11);
+  await expect.poll(frequency).toBeCloseTo(523.251, 0);
+  await seek(0.25);
+  await expect.poll(gain).toBeLessThan(0.001);
+  await seek(1.5);
+  await expect.poll(gain).toBeGreaterThan(0.11);
+  await expect.poll(frequency).toBeCloseTo(130.813, 0);
+  expect(
+    await page.evaluate(
+      () =>
+        (window as unknown as { boundsAudio: { starts: number } }).boundsAudio
+          .starts,
+    ),
+  ).toBe(1);
+  await page.getByRole("button", { name: "Pause", exact: true }).click();
+  await page.reload();
+  await page
+    .getByRole("button", { name: "Edit equation", exact: true })
+    .click();
+  await expect(page.getByLabel("Branch 1 bound", { exact: true })).toHaveValue(
+    "-2 <= x < 0",
+  );
+  // Clearing a condition must remain editable, rather than becoming otherwise.
+  await page.getByLabel("Branch 1 bound", { exact: true }).fill("");
+  await expect(page.getByRole("alert")).toContainText("condition");
+  await page.getByLabel("Branch 1 bound", { exact: true }).fill("-2 <= x < 0");
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await page.getByRole("button", { name: "Edit as text", exact: true }).click();
+  await page.getByRole("button", { name: "Edit bounds", exact: true }).click();
+  await expect(page.getByLabel("Branch 1 bound", { exact: true })).toHaveValue(
+    "-2 <= x < 0",
+  );
+  await page.getByRole("button", { name: "Edit as text", exact: true }).click();
+  await page
+    .getByLabel("Equation expression")
+    .fill("4 * sin(x) { -2 <= x < 2 }");
+  await page.getByLabel("Equation expression").press("Escape");
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(page.getByLabel("Rendered equation")).toContainText("sin");
+});
+
 test("homepage dice, corner links and saved theme work without interrupting sound", async ({
   page,
 }) => {
@@ -74,6 +198,14 @@ test("homepage dice, corner links and saved theme work without interrupting soun
   await page
     .getByRole("button", { name: "Edit equation", exact: true })
     .click();
+  if (
+    await page
+      .getByRole("button", { name: "Edit as text", exact: true })
+      .isVisible()
+  )
+    await page
+      .getByRole("button", { name: "Edit as text", exact: true })
+      .click();
   await expect(page.getByLabel("Equation expression")).toHaveText(previous!);
   await page.getByLabel("Equation expression").fill("6 * cos(x)");
   await expect(page.locator(".cm-content span").first()).toHaveCSS(

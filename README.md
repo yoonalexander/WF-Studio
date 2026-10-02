@@ -30,6 +30,20 @@ To test a deployed build, set `WF_BASE_URL` to its origin before running browser
 
 The main page is **one graph, one equation, one sustained sound** on white. Click the equation to edit it, then press Enter or Play. The equation controls the pitch of a single continuous sine oscillator without scale quantization or repeated note triggers: `y = 0` is C4 and an increase of 12 raises the pitch one octave. The moving dot follows the same AudioContext clock. The whole graph stays in one frame, with no zoom controls. Your equation is remembered independently from saved songs.
 
+Click the equation, then **Add bounds** to edit branches as expression/condition rows. The first matching condition wins; an optional **otherwise** row handles the remainder. Delete otherwise for silent gaps. Enter finishes editing and displays the equation with a mathematical brace, like the reference videos. **Random** includes repeating piecewise patterns, intervals and equations with gaps. Light/dark controls are at the bottom right.
+
+The text editor accepts interval restrictions such as `4 * sin(x) { -2 <= x < 2 }`, the existing `piecewise(condition, value, ..., otherwiseValue)`, or readable cases:
+
+```text
+{
+  3 * (1 - 2 * floor(2 * (6 * x mod 1))) if x mod 2 < 0.5;
+  -1.2 if x mod 2 < 1.2;
+  2.2 * 2 * (2 * x - floor(2 * x + 0.5)) otherwise
+}
+```
+
+Use semicolons or newlines between cases. Chained bounds (`0 <= x < 2`), `and`/`or`, modulo and equality (`==`) work in conditions. Without otherwise, undefined regions draw no curve or dot and fade to silence; `y = 0` still plays C4. Graphs split at branch changes, and both graph sampling and audio use the same restricted evaluator. These text forms also work in Song studio and exports.
+
 **Song studio** at `/studio` contains both the **Simple view** and **Detailed view**. Simple provides the composing workspace: add/remove sounds, equations, instruments, mappings, timing, mute/solo, saving and exports. Its graph fits every layer and the full loop; hollow circles show scheduled notes and filled circles show voices playing. Detailed adds the full arrangement and visual editor. Both edit the same song, and the studio view choice is remembered. Existing arrangements and project libraries are preserved when moving between the studio and the one-equation page.
 
 1. Open Song studio, then press Play on the starter composition or create a new song/project.

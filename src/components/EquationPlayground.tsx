@@ -8,6 +8,8 @@ import { continuousAudio } from "../continuous-audio";
 import { Graph } from "./Graph";
 import { EquationEditor } from "./EquationEditor";
 import { randomEquation } from "../random-equation";
+import { BoundsEditor } from "./BoundsEditor";
+import { readCases, writeCases } from "../bounds";
 
 const draftKey = "wf-one-equation";
 const themeKey = "wf-equation-theme";
@@ -16,6 +18,7 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
   const [ready, setReady] = useState(false),
     [playing, setPlaying] = useState(false);
   const [graphReady, setGraphReady] = useState(false);
+  const [boundsEditing, setBoundsEditing] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     try {
       return localStorage.getItem(themeKey) === "dark" ? "dark" : "light";
@@ -51,6 +54,13 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
     [project.tracks, project.beatsPerBar],
   );
   const track = project.tracks[0];
+  const hasCases = useMemo(() => {
+    try {
+      return !!readCases(track?.expression ?? "");
+    } catch {
+      return false;
+    }
+  }, [track?.expression]);
   const error = ready && track ? engine.errors[track.id] : undefined;
   useEffect(() => {
     if (ready) continuousAudio.update(project);
@@ -138,7 +148,7 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
           onKeyDownCapture={(e) => {
             if (
               !(e.target instanceof HTMLElement) ||
-              !e.target.closest(".cm-editor")
+              !e.target.closest(".cm-editor,.bounds-editor input")
             )
               return;
             if (e.key === "Escape" || (e.key === "Enter" && !e.shiftKey)) {
@@ -151,22 +161,36 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
           {ready &&
             track &&
             (editing || error ? (
-              <div className="simple-input">
-                <span className="equation-prefix">y =</span>
-                <EquationEditor
-                  simple
-                  autoFocus
+              boundsEditing ? (
+                <BoundsEditor
                   value={track.expression}
-                  symbols={[]}
                   onChange={changeExpression}
                 />
-              </div>
+              ) : (
+                <div className="simple-input">
+                  <span className="equation-prefix">y =</span>
+                  <EquationEditor
+                    simple
+                    autoFocus
+                    value={track.expression}
+                    symbols={[]}
+                    onChange={changeExpression}
+                  />
+                </div>
+              )
             ) : (
               <button
                 className="equation-edit"
                 aria-label="Edit equation"
                 title="Click to edit equation"
-                onClick={() => setEditing(true)}
+                onClick={() => {
+                  try {
+                    setBoundsEditing(!!readCases(track.expression));
+                  } catch {
+                    setBoundsEditing(false);
+                  }
+                  setEditing(true);
+                }}
               >
                 <span
                   aria-label="Rendered equation"
@@ -195,6 +219,37 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
                   ? "Loading…"
                   : "Play"}
             </button>
+            {(editing || error) && !boundsEditing && (
+              <button
+                className="equation-bounds"
+                disabled={!!error}
+                onClick={() => {
+                  if (!hasCases)
+                    changeExpression(
+                      writeCases([
+                        { expression: track.expression, condition: "x < 0" },
+                        {
+                          expression: `-(${track.expression})`,
+                          condition: "",
+                          otherwise: true,
+                        },
+                      ]),
+                    );
+                  setBoundsEditing(true);
+                  setEditing(true);
+                }}
+              >
+                {hasCases ? "Edit bounds" : "Add bounds"}
+              </button>
+            )}
+            {(editing || error) && boundsEditing && (
+              <button
+                className="equation-bounds"
+                onClick={() => setBoundsEditing(false)}
+              >
+                Edit as text
+              </button>
+            )}
             <button
               className="equation-random"
               aria-label="Random equation"
@@ -202,6 +257,7 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
               disabled={!ready}
               onClick={() => {
                 changeExpression(randomEquation(track.expression));
+                setBoundsEditing(false);
                 setEditing(false);
               }}
             >

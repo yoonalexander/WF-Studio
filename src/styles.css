@@ -2164,6 +2164,9 @@ body:has(.simple-app) {
 .equation-page .simple-input .cm-content span {
   color: var(--text) !important;
 }
+.equation-page .simple-input .cm-scroller {
+  max-height: 176px;
+}
 .equation-page .simple-input .cm-tooltip {
   background: var(--panel) !important;
   color: var(--text) !important;
@@ -2238,6 +2241,68 @@ body:has(.simple-app) {
   text-align: center;
   margin-top: 12px;
 }
+.equation-bounds {
+  font-size: 11px;
+  min-height: 36px;
+  color: var(--text);
+}
+.bounds-editor {
+  padding: 12px 0;
+}
+.bounds-rows {
+  border-left: 2px solid var(--text);
+  padding-left: 14px;
+  display: grid;
+  gap: 8px;
+  max-height: 176px;
+  overflow-y: auto;
+}
+.bounds-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.bounds-row input {
+  flex: 1;
+  width: 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  border-radius: 0;
+  border-width: 0 0 1px;
+}
+.bounds-row > span {
+  font:
+    italic 14px "Times New Roman",
+    serif;
+  color: var(--muted);
+}
+.bounds-row > button {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+}
+.bounds-tools {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  font-size: 10px;
+  color: var(--muted);
+}
+.bounds-tools button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 0;
+  color: var(--text);
+}
+.equation-playground:has(.bounds-editor, .cm-editor) {
+  padding-bottom: 24px;
+}
+.equation-page:has(.bounds-editor, .cm-editor) .simple-graph {
+  height: clamp(180px, 38dvh, 320px);
+}
 .equation-page[data-theme="dark"] .equation-error {
   color: #ff9393;
 }
@@ -2276,6 +2341,32 @@ body:has(.simple-app) {
   color: var(--text);
 }
 @media (max-width: 650px) {
+  .equation-page:has(.bounds-editor, .cm-editor) .simple-graph {
+    height: clamp(160px, 28dvh, 220px);
+  }
+  .bounds-row {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr) 28px;
+    gap: 4px 8px;
+  }
+  .bounds-row input {
+    width: 100%;
+  }
+  .bounds-row input:first-child {
+    grid-column: 1 / 3;
+  }
+  .bounds-row > button {
+    grid-column: 3;
+    grid-row: 1 / 3;
+    width: 28px;
+  }
+  .bounds-row > span {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .bounds-row:has(input:only-of-type) > span {
+    grid-column: 1 / 3;
+  }
   .equation-footer {
     padding: 12px 22px 16px;
   }

@@ -19,7 +19,8 @@ const language = StreamLanguage.define({
   token(stream) {
     if (stream.eatSpace()) return null;
     if (stream.match(/\d+(\.\d+)?/)) return "number";
-    if (stream.match(/\b(?:and|or|not|mod|piecewise)\b/)) return "keyword";
+    if (stream.match(/\b(?:and|or|not|mod|piecewise|bounded|if|otherwise)\b/))
+      return "keyword";
     if (stream.match(/[A-Za-z_][A-Za-z0-9_]*/)) return "variableName";
     if (stream.match(/[+*/^<>=!-]+/)) return "operator";
     stream.next();
@@ -65,12 +66,18 @@ export function EquationEditor({
                   return null;
                 return {
                   from: word.from,
-                  options: [...helpers, ...symbols, "x", "pi", "e"].map(
-                    (label) => ({
-                      label,
-                      type: helpers.includes(label) ? "function" : "variable",
-                    }),
-                  ),
+                  options: [
+                    ...helpers,
+                    ...symbols,
+                    "x",
+                    "pi",
+                    "e",
+                    "if",
+                    "otherwise",
+                  ].map((label) => ({
+                    label,
+                    type: helpers.includes(label) ? "function" : "variable",
+                  })),
                 };
               },
             ],

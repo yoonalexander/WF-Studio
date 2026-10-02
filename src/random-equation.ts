@@ -16,7 +16,15 @@ export function randomEquation(current: string): string {
       () => `${amplitude} * sin(${wave}) * cos(x * pi / ${integer(2, 4)})`,
       () => `${amplitude} * (2 * frac(x / ${integer(1, 4)}) - 1)`,
       () =>
-        `piecewise(x mod ${integer(2, 4)} < 1, ${amplitude} * sin(${wave}), ${integer(2, 6)} * cos(x * pi))`,
+        `{ ${amplitude} * sin(${wave}) if x mod ${integer(2, 4)} < 1; ${integer(2, 6)} * cos(x * pi) otherwise }`,
+      () =>
+        `{ 3 * (1 - 2 * floor(2 * (${integer(4, 8)} * x mod 1))) if x mod 2 < 0.5; -1.2 if x mod 2 < 1.2; 2.2 * 2 * (2 * x - floor(2 * x + 0.5)) otherwise }`,
+      () =>
+        `{ 1.73 * floor(1.5 * (x mod 2)) - 2.3 * (x mod 2) if x mod ${integer(4, 16)} < 2; 0.6 - 2 * (x mod 2) otherwise }`,
+      () =>
+        `{ ${amplitude} * sin(${wave}) if -${integer(1, 3)} <= x < 0; ${integer(2, 6)} * cos(x * pi) if 1 <= x < 3 }`,
+      () =>
+        `${amplitude} * cos(${wave}) { -${integer(1, 3)} <= x <= ${integer(1, 3)} }`,
     ];
     return families[integer(0, families.length - 1)]();
   };

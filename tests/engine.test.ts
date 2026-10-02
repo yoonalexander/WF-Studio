@@ -1,9 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { createMathEngine, mod } from "../src/math";
 import { makeTrack, newProject, validateProject } from "../src/model";
 import { exampleProject } from "../src/examples";
 import { collectEvents, mapPitch } from "../src/music";
 import { encodeMidi } from "../src/exports";
+import { randomEquation } from "../src/random-equation";
+import katex from "katex";
 function t(symbol: string, expression: string) {
   return { ...makeTrack(), symbol, expression };
 }
@@ -26,6 +28,95 @@ describe("restricted equation engine", () => {
   it("keeps piecewise branches lazy at singularities", () => {
     const a = t("A", "piecewise(x == 0, 7, 1/x)");
     expect(createMathEngine([a]).value(a.id, 0)).toBe(7);
+  });
+  it("supports video-style cases, first matching bounds, and lazy branches", () => {
+    const a = t("A", "{ 7 if x == 0; 1 / x if -2 <= x < 2; -3 otherwise }");
+    const e = createMathEngine([a]);
+    expect(e.errors).toEqual({});
+    expect(e.value(a.id, 0)).toBe(7);
+    expect(e.value(a.id, -2)).toBe(-0.5);
+    expect(e.value(a.id, 1)).toBe(1);
+    expect(e.value(a.id, 2)).toBe(-3);
+    expect(e.sample(a.id, 0).branch).not.toBe(e.sample(a.id, 1).branch);
+    expect(e.tex[a.id]).toContain("\\begin{cases}");
+    expect(e.tex[a.id]).toContain("otherwise");
+    expect(() =>
+      katex.renderToString(e.tex[a.id], { throwOnError: true }),
+    ).not.toThrow();
+  });
+  it("leaves gaps undefined and applies inclusive/exclusive interval boundaries", () => {
+    for (const expression of [
+      "{ 6 if -2 <= x < 1 }",
+      "6 { -2 <= x < 1 }",
+      "bounded(6, -2 <= x < 1)",
+    ]) {
+      const a = t("A", expression),
+        e = createMathEngine([a]);
+      expect(e.errors).toEqual({});
+      expect(e.value(a.id, -2)).toBe(6);
+      expect(e.value(a.id, 0)).toBe(6);
+      expect(e.value(a.id, 1)).toBeNaN();
+      expect(e.value(a.id, -2.001)).toBeNaN();
+      expect(e.tex[a.id]).not.toContain("otherwise");
+      expect(() =>
+        katex.renderToString(e.tex[a.id], { throwOnError: true }),
+      ).not.toThrow();
+    }
+  });
+  it("evaluates the screenshot's repeating three-branch equation", () => {
+    const a = t(
+      "A",
+      "{ 3 * (1 - 2 * floor(2 * (6 * x mod 1))) if x mod 2 < 0.5; -1.2 if x mod 2 < 1.2; 2.2 * 2 * (2 * x - floor(2 * x + 0.5)) otherwise }",
+    );
+    const e = createMathEngine([a]);
+    expect(e.errors).toEqual({});
+    expect(e.value(a.id, 0)).toBe(3);
+    expect(e.value(a.id, 0.5)).toBe(-1.2);
+    expect(e.value(a.id, 1.2)).toBeCloseTo(1.76);
+    expect(e.value(a.id, 0.1)).toBe(-3);
+    expect(e.sample(a.id, 0.01).branch).not.toBe(e.sample(a.id, 0.1).branch);
+    expect(e.value(a.id, -1.5)).toBe(-1.2);
+    expect(e.value(a.id, 2)).toBe(3);
+  });
+  it.each([
+    "{ x if x < 1; 0 otherwise; 2 if x > 2 }",
+    "{ x }",
+    '{ import("fs") if x < 1 }',
+    "x { x.constructor > 1 }",
+    "{ x if x < 1; otherwise }",
+    "{ x if }",
+  ])("rejects malformed or unsafe bounds: %s", (expression) => {
+    const a = t("A", expression);
+    expect(createMathEngine([a]).errors[a.id]).toBeTruthy();
+  });
+  it("every random family produces valid, bounded math or explicit gaps", () => {
+    const random = vi.spyOn(Math, "random");
+    try {
+      for (let family = 0; family < 12; family++) {
+        random
+          .mockReturnValue(0.5)
+          .mockReturnValueOnce(0.5)
+          .mockReturnValueOnce(0.5)
+          .mockReturnValueOnce((family + 0.1) / 12);
+        const a = t("A", randomEquation("")),
+          e = createMathEngine([a]);
+        expect(e.errors).toEqual({});
+        expect(() =>
+          katex.renderToString(e.tex[a.id], { throwOnError: true }),
+        ).not.toThrow();
+        let defined = 0;
+        for (let x = -4; x <= 4; x += 0.125) {
+          const value = e.value(a.id, x);
+          if (Number.isFinite(value)) {
+            defined++;
+            expect(Math.abs(value)).toBeLessThanOrEqual(12);
+          }
+        }
+        expect(defined).toBeGreaterThan(0);
+      }
+    } finally {
+      random.mockRestore();
+    }
   });
   it("supports calculator conditionals and transformations", () => {
     const a = t("A", "if x < 2 then 1 else 0");

@@ -17,9 +17,15 @@ self.onmessage = (
   const engine = createMathEngine(tracks, beatsPerBar);
   const samples = tracks.map((t) => {
     const values = new Float32Array(count);
-    for (let i = 0; i < count; i++)
-      values[i] = engine.value(t.id, start + (i / (count - 1)) * span);
-    return { id: t.id, values };
+    const breaks = new Uint8Array(count);
+    let branch = "";
+    for (let i = 0; i < count; i++) {
+      const point = engine.sample(t.id, start + (i / (count - 1)) * span);
+      values[i] = point.value;
+      breaks[i] = Number(i > 0 && point.branch !== branch);
+      branch = point.branch;
+    }
+    return { id: t.id, values, breaks };
   });
   let events: ReturnType<typeof collectEvents> = [];
   if (e.data.simple && e.data.project) {
@@ -31,6 +37,6 @@ self.onmessage = (
   }
   self.postMessage(
     { id, samples, events, errors: engine.errors },
-    { transfer: samples.map((s) => s.values.buffer) },
+    { transfer: samples.flatMap((s) => [s.values.buffer, s.breaks.buffer]) },
   );
 };

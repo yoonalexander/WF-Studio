@@ -1,6 +1,7 @@
 import { parse } from "mathjs";
 import type { MathNode } from "mathjs";
 import type { Track } from "./model";
+import { boundedSource } from "./bounds";
 
 export const helpers = [
   "sin",
@@ -36,6 +37,7 @@ export const helpers = [
   "quantize",
   "scale",
   "piecewise",
+  "bounded",
 ];
 const reserved = new Set([
   ...helpers,
@@ -54,7 +56,7 @@ export const mod = (a: number, b: number) => ((a % b) + b) % b;
 export const clamp = (x: number, a: number, b: number) =>
   Math.max(a, Math.min(b, x));
 type Value = number | boolean;
-type Budget = { left: number; depth: number };
+type Budget = { left: number; depth: number; branch: string };
 type Eval = (x: number, budget: Budget) => Value;
 type Node = MathNode & {
   value?: unknown;
@@ -66,10 +68,13 @@ type Node = MathNode & {
   condition?: MathNode;
   trueExpr?: MathNode;
   falseExpr?: MathNode;
+  conditionals?: string[];
+  params?: MathNode[];
 };
 export interface MathEngine {
   errors: Record<string, string>;
   value: (id: string, x: number) => number;
+  sample: (id: string, x: number) => { value: number; branch: string };
   tex: Record<string, string>;
 }
 
@@ -86,7 +91,44 @@ function source(track: Track): string {
   const conditional = text.match(/^if\s+(.+?)\s+then\s+(.+?)\s+else\s+(.+)$/);
   if (conditional)
     text = `(${conditional[1]}) ? (${conditional[2]}) : (${conditional[3]})`;
-  return text;
+  return boundedSource(text);
+}
+const relations: Record<string, (a: Value, b: Value) => boolean> = {
+  smaller: (a, b) => a < b,
+  smallerEq: (a, b) => a <= b,
+  larger: (a, b) => a > b,
+  largerEq: (a, b) => a >= b,
+  equal: (a, b) => a === b,
+  unequal: (a, b) => a !== b,
+};
+
+function equationTex(tree: MathNode): string {
+  const options = {
+    handler: (node: MathNode): string | undefined => {
+      const n = node as Node;
+      const tex = (child: MathNode): string => {
+        while (child.type === "ParenthesisNode")
+          child = (child as Node).content!;
+        return child.toTex(options);
+      };
+      if (n.type === "FunctionNode" && (n.fn as Node).name === "piecewise") {
+        const args = n.args!;
+        const rows: string[] = [];
+        for (let i = 0; i < args.length - 1; i += 2)
+          rows.push(`${tex(args[i + 1])} & \\text{if } ${tex(args[i])}`);
+        // An omitted otherwise branch is undefined, not the note y = 0.
+        if (args.at(-1)!.toString({ parenthesis: "auto" }) !== "0 / 0")
+          rows.push(`${tex(args.at(-1)!)} & \\text{otherwise}`);
+        return `\\begin{cases}${rows.join(" \\\\ ")}\\end{cases}`;
+      }
+      if (n.type === "FunctionNode" && (n.fn as Node).name === "bounded")
+        return `${tex(n.args![0])}\\quad\\{${tex(n.args![1])}\\}`;
+      if (n.type === "ConditionalNode")
+        return `\\begin{cases}${tex(n.trueExpr!)} & \\text{if } ${tex(n.condition!)} \\\\ ${tex(n.falseExpr!)} & \\text{otherwise}\\end{cases}`;
+      return undefined;
+    },
+  };
+  return tree.toTex(options);
 }
 const unary: Record<string, (v: number) => number> = {
   sin: Math.sin,
@@ -110,6 +152,7 @@ const unary: Record<string, (v: number) => number> = {
   frac: (v) => mod(v, 1),
 };
 export function createMathEngine(tracks: Track[], beatsPerBar = 4): MathEngine {
+  let nextBranch = 0;
   const errors: Record<string, string> = {};
   const tex: Record<string, string> = {};
   const named = new Map<string, Track>();
@@ -169,6 +212,10 @@ export function createMathEngine(tracks: Track[], beatsPerBar = 4): MathEngine {
           )
             throw new Error(`Operator not supported: ${n.op}`);
           n.args!.forEach((a) => validate(a, depth + 1));
+        } else if (n.type === "RelationalNode") {
+          if (n.conditionals!.some((c) => !Object.hasOwn(relations, c)))
+            throw new Error("Unsupported bound comparison.");
+          n.params!.forEach((a) => validate(a, depth + 1));
         } else if (n.type === "FunctionNode") {
           const f = (n.fn as Node).name!;
           if (!helpers.includes(f) && !named.has(f))
@@ -182,6 +229,7 @@ export function createMathEngine(tracks: Track[], beatsPerBar = 4): MathEngine {
             throw new Error("At most 32 arguments per function.");
           const arity: Record<string, [number, number]> = {
             pulse: [2, 3],
+            bounded: [2, 2],
             piecewise: [3, 31],
             sequence: [1, 32],
             step: [1, 32],
@@ -215,7 +263,7 @@ export function createMathEngine(tracks: Track[], beatsPerBar = 4): MathEngine {
       validate(tree, 0);
       ast.set(t.id, tree);
       deps.set(t.id, dependencies);
-      tex[t.id] = tree.toTex();
+      tex[t.id] = equationTex(tree);
     } catch (e) {
       errors[t.id] = e instanceof Error ? e.message : "Invalid expression";
     }
@@ -250,12 +298,29 @@ export function createMathEngine(tracks: Track[], beatsPerBar = 4): MathEngine {
                     : (x, b) => evaluators.get(named.get(n.name!)!.id)!(x, b);
       else if (n.type === "ParenthesisNode") fn = compile(n.content!);
       else if (n.type === "ConditionalNode") {
+        const branch = nextBranch++;
         const c = compile(n.condition!),
           a = compile(n.trueExpr!),
           d = compile(n.falseExpr!);
-        fn = (x, b) => (c(x, b) ? a(x, b) : d(x, b));
+        fn = (x, b) => {
+          const choose = !!c(x, b);
+          b.branch += `${branch}:${choose ? 1 : 0};`;
+          return choose ? a(x, b) : d(x, b);
+        };
+      } else if (n.type === "RelationalNode") {
+        const params = n.params!.map(compile);
+        fn = (x, b) => {
+          let left = params[0](x, b);
+          for (let i = 0; i < n.conditionals!.length; i++) {
+            const right = params[i + 1](x, b);
+            if (!relations[n.conditionals![i]](left, right)) return false;
+            left = right;
+          }
+          return true;
+        };
       } else if (n.type === "OperatorNode") {
         const a = n.args!.map(compile);
+        const branch = nextBranch++;
         fn = (x, b) => {
           const l = a[0](x, b);
           if (n.op === "not") return !l;
@@ -275,6 +340,7 @@ export function createMathEngine(tracks: Track[], beatsPerBar = 4): MathEngine {
               return Number(l) ** Number(r);
             case "%":
             case "mod":
+              b.branch += `${branch}:${Math.floor(Number(l) / Number(r))};`;
               return mod(Number(l), Number(r));
             case "<":
               return l < r;
@@ -295,14 +361,28 @@ export function createMathEngine(tracks: Track[], beatsPerBar = 4): MathEngine {
       } else {
         const f = (n.fn as Node).name!;
         const a = n.args!.map(compile);
+        const branch = nextBranch++;
         fn = (x, b) => {
+          if (f === "bounded") {
+            const inside = !!a[1](x, b);
+            b.branch += `${branch}:${inside ? 1 : 0};`;
+            return inside ? a[0](x, b) : NaN;
+          }
           if (f === "piecewise") {
             for (let i = 0; i < a.length - 1; i += 2)
-              if (a[i](x, b)) return a[i + 1](x, b);
+              if (a[i](x, b)) {
+                b.branch += `${branch}:${i};`;
+                return a[i + 1](x, b);
+              }
+            b.branch += `${branch}:else;`;
             return a[a.length - 1](x, b);
           }
           const v = a.map((arg) => Number(arg(x, b)));
           if (named.has(f)) return evaluators.get(named.get(f)!.id)!(v[0], b);
+          if (f === "floor" || f === "ceil" || f === "round")
+            b.branch += `${branch}:${unary[f](v[0])};`;
+          if (f === "frac") b.branch += `${branch}:${Math.floor(v[0])};`;
+          if (f === "mod") b.branch += `${branch}:${Math.floor(v[0] / v[1])};`;
           if (unary[f]) return unary[f](v[0]);
           switch (f) {
             case "min":
@@ -370,18 +450,22 @@ export function createMathEngine(tracks: Track[], beatsPerBar = 4): MathEngine {
       errors[t.id] = e instanceof Error ? e.message : "Invalid dependency";
     }
   }
+  const sample = (id: string, x: number) => {
+    const budget = { left: 2048, depth: 0, branch: "" };
+    try {
+      const result = Number(evaluators.get(id)?.(x, budget));
+      return {
+        value: Number.isFinite(result) && Math.abs(result) < 1e9 ? result : NaN,
+        branch: budget.branch,
+      };
+    } catch {
+      return { value: NaN, branch: budget.branch };
+    }
+  };
   return {
     errors,
     tex,
-    value: (id, x) => {
-      try {
-        const result = Number(
-          evaluators.get(id)?.(x, { left: 2048, depth: 0 }),
-        );
-        return Number.isFinite(result) && Math.abs(result) < 1e9 ? result : NaN;
-      } catch {
-        return NaN;
-      }
-    },
+    sample,
+    value: (id, x) => sample(id, x).value,
   };
 }

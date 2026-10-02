@@ -13,6 +13,7 @@ export function simpleColor(track: Track) {
 export interface Curve {
   id: string;
   values: Float32Array;
+  breaks?: Uint8Array;
 }
 export interface View {
   start: number;
@@ -163,7 +164,14 @@ export function drawGraph(
         return sum + (t?.enabled && !t.muted ? c.values[i] : 0);
       }, 0);
     }
-    drawn = [{ id: "sum", values }];
+    const breaks = new Uint8Array(values.length);
+    for (const curve of curves) {
+      const track = project.tracks.find((t) => t.id === curve.id);
+      if (!track?.enabled || track.muted) continue;
+      for (let i = 0; i < breaks.length; i++)
+        breaks[i] ||= curve.breaks?.[i] ?? 0;
+    }
+    drawn = [{ id: "sum", values, breaks }];
   }
   for (const curve of drawn) {
     const track = project.tracks.find((t) => t.id === curve.id);
@@ -226,7 +234,8 @@ export function drawGraph(
         pen = false;
         continue;
       }
-      if (!pen || Math.abs(pixel - last) > h * 0.6) ctx.moveTo(x, pixel);
+      if (!pen || curve.breaks?.[i] || Math.abs(pixel - last) > h * 0.6)
+        ctx.moveTo(x, pixel);
       else ctx.lineTo(x, pixel);
       pen = true;
       last = pixel;
@@ -250,7 +259,7 @@ export function drawGraph(
           connected = false;
           continue;
         }
-        if (!connected || Math.abs(pixel - prev) > h * 0.6)
+        if (!connected || curve.breaks?.[i] || Math.abs(pixel - prev) > h * 0.6)
           curvePath.moveTo(x, pixel);
         else curvePath.lineTo(x, pixel);
         connected = true;

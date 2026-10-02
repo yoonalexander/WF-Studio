@@ -212,12 +212,21 @@ export async function exportVideo(
     view.start = start + Math.floor((beat - start) / view.span) * view.span;
     if (view.start !== lastView) {
       lastView = view.start;
-      curves = project.tracks.map((t) => ({
-        id: t.id,
-        values: Float32Array.from({ length: count }, (_, i) =>
-          engine.value(t.id, view.start + (i / (count - 1)) * view.span),
-        ),
-      }));
+      curves = project.tracks.map((t) => {
+        const values = new Float32Array(count),
+          breaks = new Uint8Array(count);
+        let branch = "";
+        for (let i = 0; i < count; i++) {
+          const point = engine.sample(
+            t.id,
+            view.start + (i / (count - 1)) * view.span,
+          );
+          values[i] = point.value;
+          breaks[i] = Number(i > 0 && point.branch !== branch);
+          branch = point.branch;
+        }
+        return { id: t.id, values, breaks };
+      });
     }
     drawGraph(
       ctx,
