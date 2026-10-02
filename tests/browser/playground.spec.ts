@@ -1,5 +1,118 @@
 import { test, expect } from "@playwright/test";
 
+test("homepage dice, corner links and saved theme work without interrupting sound", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const Original = window.AudioContext;
+    (window as unknown as { voiceStarts: number }).voiceStarts = 0;
+    window.AudioContext = class extends Original {
+      createOscillator() {
+        const oscillator = super.createOscillator(),
+          start = oscillator.start.bind(oscillator);
+        oscillator.start = (...args) => {
+          (window as unknown as { voiceStarts: number }).voiceStarts++;
+          start(...args);
+        };
+        return oscillator;
+      }
+    };
+  });
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.goto("/");
+  const portfolio = page.getByRole("link", { name: "alexyoon.com" });
+  await expect(portfolio).toHaveAttribute("href", "https://alexyoon.com");
+  await expect(
+    page.getByRole("button", { name: "Light mode", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Play", exact: true }).click();
+  let previous = await page.evaluate(() =>
+    localStorage.getItem("wf-one-equation"),
+  );
+  for (let roll = 0; roll < 8; roll++) {
+    await page.getByRole("button", { name: "Random equation" }).click();
+    await expect
+      .poll(() => page.evaluate(() => localStorage.getItem("wf-one-equation")))
+      .not.toBe(previous);
+    previous = await page.evaluate(() =>
+      localStorage.getItem("wf-one-equation"),
+    );
+    await expect(page.getByLabel("Rendered equation")).not.toBeEmpty();
+    await expect(page.getByRole("alert")).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Pause", exact: true }),
+    ).toBeVisible();
+  }
+  await page.getByRole("button", { name: "Dark mode", exact: true }).click();
+  await expect(page.locator(".equation-page")).toHaveCSS(
+    "background-color",
+    "rgb(21, 21, 21)",
+  );
+  // Check the actual rendered canvas, including light curve/axis pixels.
+  await expect
+    .poll(() =>
+      page.locator("canvas").evaluate((canvas: HTMLCanvasElement) => {
+        const data = canvas
+          .getContext("2d")!
+          .getImageData(0, 0, canvas.width, canvas.height).data;
+        let light = 0;
+        for (let i = 0; i < data.length; i += 4) if (data[i] > 180) light++;
+        return data[0] === 21 && light > 100;
+      }),
+    )
+    .toBe(true);
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { voiceStarts: number }).voiceStarts,
+    ),
+  ).toBe(1);
+  await page.getByRole("button", { name: "Pause", exact: true }).click();
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Dark mode", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page
+    .getByRole("button", { name: "Edit equation", exact: true })
+    .click();
+  await expect(page.getByLabel("Equation expression")).toHaveText(previous!);
+  await page.getByLabel("Equation expression").fill("6 * cos(x)");
+  await expect(page.locator(".cm-content span").first()).toHaveCSS(
+    "color",
+    "rgb(238, 238, 238)",
+  );
+  await page.getByLabel("Equation expression").press("Escape");
+  for (const width of [1366, 390, 320]) {
+    await page.setViewportSize({ width, height: width === 1366 ? 768 : 720 });
+    const corners = await page.evaluate(() => {
+      const link = document
+        .querySelector(".equation-footer a")!
+        .getBoundingClientRect();
+      const theme = document
+        .querySelector(".equation-theme")!
+        .getBoundingClientRect();
+      return {
+        linkX: link.left,
+        linkY: link.top,
+        themeRight: theme.right,
+        themeY: theme.top,
+        width: document.documentElement.scrollWidth,
+        height: document.documentElement.scrollHeight,
+      };
+    });
+    expect(corners.width).toBeLessThanOrEqual(width);
+    expect(corners.height).toBeLessThanOrEqual(width === 1366 ? 768 : 720);
+    expect(corners.linkX).toBeLessThan(40);
+    expect(corners.linkY).toBeGreaterThan((width === 1366 ? 768 : 720) - 70);
+    expect(corners.themeRight).toBeGreaterThan(width - 40);
+    expect(corners.themeY).toBeGreaterThan((width === 1366 ? 768 : 720) - 70);
+  }
+  await page.getByRole("button", { name: "Light mode", exact: true }).click();
+  await expect(page.locator(".equation-page")).toHaveCSS(
+    "background-color",
+    "rgb(255, 255, 255)",
+  );
+});
+
 test("a slow initial graph download cannot start sound before the curve is ready", async ({
   page,
 }) => {

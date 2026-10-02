@@ -12,6 +12,7 @@ export function Graph({
   onError,
   simple = false,
   minimal = false,
+  appearance = "light",
   transport = audio,
   onSampled,
 }: {
@@ -20,6 +21,7 @@ export function Graph({
   onError: (s: string) => void;
   simple?: boolean;
   minimal?: boolean;
+  appearance?: "light" | "dark";
   transport?: Pick<typeof audio, "position" | "soundingNotes">;
   onSampled?: () => void;
 }) {
@@ -47,6 +49,7 @@ export function Graph({
     playing,
     simple,
     minimal,
+    appearance,
     transport,
     onSampled,
   });
@@ -57,6 +60,7 @@ export function Graph({
     playing,
     simple,
     minimal,
+    appearance,
     transport,
     onSampled,
   };
@@ -180,6 +184,7 @@ export function Graph({
             events.current,
             s.transport.soundingNotes(),
             s.minimal,
+            s.appearance,
           );
           if (
             s.playing &&

@@ -46,10 +46,14 @@ export function drawGraph(
   events: MusicEvent[] = [],
   sounding: MusicEvent[] = [],
   minimal = false,
+  appearance: "light" | "dark" = "light",
 ) {
-  const theme = simple
-      ? { bg: "#ffffff", grid: "#ffffff", axis: "#111111", text: "#111111" }
-      : graphThemes[project.visuals.theme],
+  const theme =
+      minimal && appearance === "dark"
+        ? { bg: "#151515", grid: "#151515", axis: "#eeeeee", text: "#eeeeee" }
+        : simple
+          ? { bg: "#ffffff", grid: "#ffffff", axis: "#111111", text: "#111111" }
+          : graphThemes[project.visuals.theme],
     pad = { left: 50, right: 24, top: 30, bottom: 40 },
     w = width - pad.left - pad.right,
     h = height - pad.top - pad.bottom;
@@ -170,7 +174,7 @@ export function drawGraph(
         (!simple || (track.volume > 0 && project.master > 0)));
     const rawColor = track?.color ?? "#f0e7ff";
     const color = minimal
-      ? "#111111"
+      ? theme.text
       : simple
         ? track
           ? simpleColor(track)

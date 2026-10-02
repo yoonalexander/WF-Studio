@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Play, Pause, ArrowUpRight } from "lucide-react";
+import { Play, Pause, ArrowUpRight, Dices, Sun, Moon } from "lucide-react";
 import katex from "katex";
 import { useStudio } from "../store";
 import { newSimpleSong } from "../simple";
@@ -7,13 +7,22 @@ import { createMathEngine } from "../math";
 import { continuousAudio } from "../continuous-audio";
 import { Graph } from "./Graph";
 import { EquationEditor } from "./EquationEditor";
+import { randomEquation } from "../random-equation";
 
 const draftKey = "wf-one-equation";
+const themeKey = "wf-equation-theme";
 export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
   const { project, load, track: update } = useStudio();
   const [ready, setReady] = useState(false),
     [playing, setPlaying] = useState(false);
   const [graphReady, setGraphReady] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    try {
+      return localStorage.getItem(themeKey) === "dark" ? "dark" : "light";
+    } catch {
+      return "light";
+    }
+  });
   const [editing, setEditing] = useState(false),
     [message, setMessage] = useState("");
   useEffect(() => {
@@ -98,7 +107,7 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
   const notify = useCallback((s: string) => setMessage(s), []);
   const sampled = useCallback(() => setGraphReady(true), []);
   return (
-    <div className="app simple-app equation-page" data-theme="simple">
+    <div className="app simple-app equation-page" data-theme={theme}>
       <header className="equation-header">
         <span>Wave Function</span>
         <a
@@ -116,6 +125,7 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
           <Graph
             simple
             minimal
+            appearance={theme}
             playing={playing}
             transport={continuousAudio}
             onSeek={(beat) => continuousAudio.seek(beat)}
@@ -185,6 +195,19 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
                   ? "Loading…"
                   : "Play"}
             </button>
+            <button
+              className="equation-random"
+              aria-label="Random equation"
+              title="Try a random equation"
+              disabled={!ready}
+              onClick={() => {
+                changeExpression(randomEquation(track.expression));
+                setEditing(false);
+              }}
+            >
+              <Dices size={16} />
+              Random
+            </button>
             <span>
               {editing
                 ? "Enter to finish. x is time; y is pitch."
@@ -198,6 +221,31 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
           )}
         </div>
       </main>
+      <footer className="equation-footer">
+        <a href="https://alexyoon.com">
+          alexyoon.com <ArrowUpRight size={12} />
+        </a>
+        <div className="equation-theme" role="group" aria-label="Color theme">
+          {(["light", "dark"] as const).map((choice) => (
+            <button
+              key={choice}
+              aria-label={`${choice === "light" ? "Light" : "Dark"} mode`}
+              aria-pressed={theme === choice}
+              title={`${choice === "light" ? "Light" : "Dark"} mode`}
+              onClick={() => {
+                setTheme(choice);
+                try {
+                  localStorage.setItem(themeKey, choice);
+                } catch {
+                  /* Storage is optional. */
+                }
+              }}
+            >
+              {choice === "light" ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+          ))}
+        </div>
+      </footer>
     </div>
   );
 }
