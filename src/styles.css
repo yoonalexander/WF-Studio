@@ -1681,3 +1681,269 @@ progress {
     transition: none !important;
   }
 }
+
+/* The simple view is a sheet of graph paper without the paper grid. */
+body:has(.simple-app) {
+  background: #fff;
+}
+.app.simple-app {
+  --bg: #fff;
+  --panel: #fff;
+  --canvas: #fff;
+  --text: #111;
+  --muted: #737373;
+  --faint: #737373;
+  --line: #e5e5e5;
+  --accent: #111;
+  --field: #fff;
+  --hover: #f7f7f7;
+  min-height: 100dvh;
+}
+.simple-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28px 40px;
+  gap: 20px;
+}
+.simple-wordmark {
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.4px;
+}
+.simple-detail-switch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 8px 0;
+}
+.simple-detail-switch:hover {
+  color: #111;
+}
+.simple-studio {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 0 35px 45px;
+}
+.simple-graph {
+  position: relative;
+  height: clamp(330px, 59dvh, 680px);
+  min-height: 0;
+  background: #fff;
+}
+.simple-graph .panel-heading {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  padding: 0;
+  opacity: 0.55;
+}
+.simple-graph .panel-heading:hover,
+.simple-graph .panel-heading:focus-within {
+  opacity: 1;
+}
+.simple-graph .icon-button {
+  width: 30px;
+  height: 30px;
+}
+.simple-graph canvas {
+  height: 0;
+  min-height: 0;
+}
+.simple-equation {
+  max-width: 850px;
+  margin: 0 auto;
+  padding: 8px 20px 0;
+}
+.simple-notation {
+  text-align: center;
+  min-height: 58px;
+  overflow-x: auto;
+  padding: 5px 0 12px;
+}
+.simple-notation .katex-display {
+  margin: 0;
+}
+.simple-notation .katex {
+  font-size: 1.25em;
+}
+.simple-input {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  border-bottom: 1px solid #d2d2d2;
+  padding: 3px 8px;
+}
+.simple-input:focus-within {
+  border-bottom-color: #111;
+  box-shadow: 0 1px 0 #111;
+}
+.simple-input.invalid {
+  border-color: #a92c2c;
+}
+.equation-prefix {
+  font:
+    italic 24px "Times New Roman",
+    serif;
+  padding-top: 10px;
+  white-space: nowrap;
+}
+.simple-input .equation-editor {
+  flex: 1;
+  border: 0;
+  border-radius: 0;
+  min-height: 52px;
+}
+.simple-input .cm-content {
+  padding: 12px 0 !important;
+}
+.simple-input .cm-content span {
+  color: #111 !important;
+}
+.simple-input .cm-scroller {
+  overflow-x: auto;
+}
+.simple-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}
+.simple-playback {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.simple-playback > button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+}
+.simple-play {
+  gap: 8px;
+  font-size: 12px;
+  padding: 8px 13px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+.simple-tempo {
+  font: 10px var(--mono);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.simple-tempo input {
+  width: 45px;
+  border: 0;
+  padding: 5px 0;
+  color: #111;
+  font: 12px var(--mono);
+  border-radius: 0;
+}
+.simple-tempo input:focus {
+  outline: 1px solid #111;
+  outline-offset: 2px;
+}
+.simple-tempo input::-webkit-inner-spin-button {
+  display: none;
+}
+.simple-track-select {
+  font-size: 11px;
+  color: var(--muted);
+  border: 0;
+  padding: 7px 3px;
+  max-width: 180px;
+}
+.simple-links {
+  margin-left: auto;
+  display: flex;
+  gap: 20px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.simple-links button {
+  min-height: 36px;
+  padding: 5px 0;
+}
+.simple-hint {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.8;
+}
+.simple-error {
+  font-size: 12px;
+  color: #a92c2c;
+  padding: 12px 8px 0;
+  line-height: 1.6;
+}
+.simple-add {
+  display: block;
+  margin: 20px auto;
+  font-size: 16px;
+  padding: 12px;
+  border-bottom: 1px solid #111;
+}
+.view-switch {
+  white-space: nowrap;
+}
+@media (max-width: 650px) {
+  .simple-header {
+    padding: 20px 22px;
+  }
+  .simple-wordmark {
+    font-size: 14px;
+  }
+  .simple-detail-switch {
+    font-size: 11px;
+  }
+  .simple-studio {
+    padding: 0 10px 30px;
+  }
+  .simple-graph {
+    height: clamp(300px, 51dvh, 520px);
+  }
+  .simple-equation {
+    padding: 6px 14px 0;
+  }
+  .simple-notation {
+    min-height: 55px;
+    font-size: 12px;
+  }
+  .simple-input {
+    gap: 8px;
+    padding: 0;
+  }
+  .simple-input .cm-editor {
+    font-size: 13px;
+  }
+  .equation-prefix {
+    font-size: 21px;
+  }
+  .simple-controls {
+    gap: 8px 16px;
+    margin: 12px 0;
+  }
+  .simple-playback {
+    gap: 10px;
+  }
+  .simple-track-select {
+    max-width: 135px;
+    margin-left: auto;
+  }
+  .simple-links {
+    flex-basis: 100%;
+    justify-content: center;
+  }
+  .simple-hint {
+    font-size: 10px;
+  }
+  .top-actions .view-switch {
+    width: auto;
+    padding: 7px;
+  }
+}

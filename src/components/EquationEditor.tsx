@@ -30,10 +30,12 @@ export function EquationEditor({
   value,
   onChange,
   symbols,
+  simple = false,
 }: {
   value: string;
   onChange: (v: string) => void;
   symbols: string[];
+  simple?: boolean;
 }) {
   const root = useRef<HTMLDivElement>(null),
     view = useRef<EditorView | undefined>(undefined),
@@ -47,7 +49,7 @@ export function EquationEditor({
       state: EditorState.create({
         doc: value,
         extensions: [
-          lineNumbers(),
+          ...(simple ? [] : [lineNumbers()]),
           highlightActiveLine(),
           history(),
           language,
@@ -114,7 +116,7 @@ export function EquationEditor({
     };
     // A track selection remounts this editor. External edits are synchronized below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [symbols.join("|")]);
+  }, [symbols.join("|"), simple]);
   useEffect(() => {
     const v = view.current;
     if (v && v.state.doc.toString() !== value) {

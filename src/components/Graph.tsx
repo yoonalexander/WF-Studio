@@ -8,10 +8,12 @@ export function Graph({
   playing,
   onSeek,
   onError,
+  simple = false,
 }: {
   playing: boolean;
   onSeek: (beat: number) => void;
   onError: (s: string) => void;
+  simple?: boolean;
 }) {
   const project = useStudio((s) => s.project),
     selectedId = useStudio((s) => s.selectedId),
@@ -23,14 +25,14 @@ export function Graph({
     request = useRef(0),
     timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [view, setView] = useState<View>({
-      start: 0,
+      start: simple ? -8 : 0,
       span: 16,
-      yCenter: 2,
-      ySpan: 12,
+      yCenter: simple ? 0 : 2,
+      ySpan: simple ? 4 : 12,
     }),
     [sampling, setSampling] = useState(false);
-  const state = useRef({ project, selectedId, view, playing });
-  state.current = { project, selectedId, view, playing };
+  const state = useRef({ project, selectedId, view, playing, simple });
+  state.current = { project, selectedId, view, playing, simple };
   const factory = useRef<() => Worker>(() => {
     throw new Error("Worker is not initialized.");
   });
@@ -115,15 +117,19 @@ export function Graph({
             beat,
             s.playing,
             s.selectedId,
+            s.simple,
           );
           if (
             s.playing &&
-            s.project.visuals.follow &&
-            beat > s.view.start + s.view.span
+            (s.simple || s.project.visuals.follow) &&
+            (beat > s.view.start + s.view.span ||
+              (s.simple && beat < s.view.start))
           ) {
             setView((v) => ({
               ...v,
-              start: Math.floor(beat / v.span) * v.span,
+              start: s.simple
+                ? Math.floor((beat + v.span / 2) / v.span) * v.span - v.span / 2
+                : Math.floor(beat / v.span) * v.span,
             }));
           }
         }
@@ -146,14 +152,16 @@ export function Graph({
       ySpan: Math.min(256, Math.max(2, v.ySpan * factor)),
     }));
   return (
-    <div className="graph-panel" ref={shell}>
+    <div className={`graph-panel ${simple ? "simple-graph" : ""}`} ref={shell}>
       <div className="panel-heading">
-        <div>
-          <span className="eyebrow">LIVE GRAPH</span>
-          <h2>Every curve has a voice.</h2>
-        </div>
+        {!simple && (
+          <div>
+            <span className="eyebrow">LIVE GRAPH</span>
+            <h2>Every curve has a voice.</h2>
+          </div>
+        )}
         <div className="graph-actions">
-          <span className="sample-state">
+          <span className={`sample-state ${simple ? "sr-only" : ""}`}>
             {sampling ? "Sampling…" : "x = beats"}
           </span>
           <button
@@ -174,7 +182,12 @@ export function Graph({
             className="icon-button"
             aria-label="Reset graph view"
             onClick={() =>
-              setView({ start: 0, span: 16, yCenter: 2, ySpan: 12 })
+              setView({
+                start: simple ? -8 : 0,
+                span: 16,
+                yCenter: simple ? 0 : 2,
+                ySpan: simple ? 4 : 12,
+              })
             }
           >
             <Crosshair size={16} />
@@ -244,37 +257,39 @@ export function Graph({
         }}
         onPointerCancel={() => (drag.current = null)}
       />
-      <div className="graph-footer">
-        <div className="legend">
-          {project.tracks
-            .filter((t) => t.enabled)
-            .map((t) => (
-              <button
-                key={t.id}
-                onClick={() => useStudio.getState().select(t.id)}
-                title={t.name}
-              >
-                <i style={{ background: t.color }} />
-                {t.symbol}(x)
-              </button>
-            ))}
-          {!project.tracks.length && (
-            <span>Add a track to draw your first equation.</span>
-          )}
+      {!simple && (
+        <div className="graph-footer">
+          <div className="legend">
+            {project.tracks
+              .filter((t) => t.enabled)
+              .map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => useStudio.getState().select(t.id)}
+                  title={t.name}
+                >
+                  <i style={{ background: t.color }} />
+                  {t.symbol}(x)
+                </button>
+              ))}
+            {!project.tracks.length && (
+              <span>Add a track to draw your first equation.</span>
+            )}
+          </div>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={project.visuals.combined}
+              onChange={(e) =>
+                change((p) => {
+                  p.visuals.combined = e.target.checked;
+                })
+              }
+            />
+            Σ combined curve
+          </label>
         </div>
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={project.visuals.combined}
-            onChange={(e) =>
-              change((p) => {
-                p.visuals.combined = e.target.checked;
-              })
-            }
-          />
-          Σ combined curve
-        </label>
-      </div>
+      )}
     </div>
   );
 }

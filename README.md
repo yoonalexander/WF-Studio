@@ -28,6 +28,8 @@ To test a deployed build, set `WF_BASE_URL` to its origin before running browser
 
 ## Create a composition
 
+The default **Simple view** shows one black curve on white, with its formatted equation and an editable math input below. Play, tempo, equation selection, examples and help stay within reach. **Detailed studio** opens the full track editor, instruments, arrangement, project library and exports; both views edit the same project. Your view choice is remembered on this device.
+
 1. Press Play on the starter composition, or open Projects → New project.
 2. Add a Kick and enter `exp(-8 * (x mod 1))`. Event → Trigger detects the rising edge at 0.8.
 3. Add a Bass with `sequence(0, 0, -4, -2)`, mapped to pitch.

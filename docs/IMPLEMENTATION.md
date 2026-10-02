@@ -4,6 +4,8 @@ The supplied v0.1 design separates equations, numeric values, musical mappings a
 
 ## Scope delivered
 
+The default interface now follows the video reference: white background, black curve, arrowed x/y axes, a moving point, and a math input beneath the graph. A Detailed studio switch preserves the original full interface. The display choice is separate from project settings; switching does not reset audio or change stored themes, tracks or arrangements. Two additional browser workflows verify shared editing, uninterrupted playback, persistence, errors, empty projects and layouts at 390 px and 320 px.
+
 The local-first MVP in section 30 is implemented, with arrangement, themes, presets, undo/redo, local project browser, MIDI, browser video and compressed remix links extending into phases 2–3. The app opens directly to a playable example. Its equation editor, sandbox, renderer and transport remain independent.
 
 One deliberate stack adjustment: native Web Audio replaces Tone.js so the exact same synthesized voices can be scheduled by the live transport and OfflineAudioContext exports. React, TypeScript, Vite, Zustand, mathjs AST parsing, CodeMirror, KaTeX, Dexie and worker sampling are retained. No server or paid API is involved.

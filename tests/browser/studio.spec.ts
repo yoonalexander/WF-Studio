@@ -1,5 +1,11 @@
 import { test, expect } from "@playwright/test";
 import fs from "node:fs/promises";
+// The existing acceptance workflows exercise the detailed studio.
+test.beforeEach(async ({ context }) => {
+  await context.addInitScript(() =>
+    localStorage.setItem("wave-function-view", "detailed"),
+  );
+});
 test("MVP workflow: compose, play, persist, export WAV/MIDI and recover imports", async ({
   page,
 }) => {

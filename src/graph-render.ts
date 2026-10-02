@@ -31,8 +31,11 @@ export function drawGraph(
   beat: number,
   playing: boolean,
   selectedId = "",
+  simple = false,
 ) {
-  const theme = graphThemes[project.visuals.theme],
+  const theme = simple
+      ? { bg: "#ffffff", grid: "#ffffff", axis: "#111111", text: "#111111" }
+      : graphThemes[project.visuals.theme],
     pad = { left: 50, right: 24, top: 30, bottom: 40 },
     w = width - pad.left - pad.right,
     h = height - pad.top - pad.bottom;
@@ -45,38 +48,40 @@ export function drawGraph(
   ctx.lineWidth = 1;
   const xStep = 2 ** Math.ceil(Math.log2(view.span / 12)),
     yStep = 2 ** Math.ceil(Math.log2(view.ySpan / 8));
-  for (
-    let x = Math.ceil(view.start / xStep) * xStep;
-    x <= view.start + view.span;
-    x += xStep
-  ) {
-    const pixel = px(x);
-    if (project.visuals.grid) {
-      ctx.strokeStyle = theme.grid;
-      ctx.beginPath();
-      ctx.moveTo(pixel, pad.top);
-      ctx.lineTo(pixel, height - pad.bottom);
-      ctx.stroke();
+  if (!simple)
+    for (
+      let x = Math.ceil(view.start / xStep) * xStep;
+      x <= view.start + view.span;
+      x += xStep
+    ) {
+      const pixel = px(x);
+      if (project.visuals.grid) {
+        ctx.strokeStyle = theme.grid;
+        ctx.beginPath();
+        ctx.moveTo(pixel, pad.top);
+        ctx.lineTo(pixel, height - pad.bottom);
+        ctx.stroke();
+      }
+      ctx.fillStyle = theme.text;
+      ctx.fillText(String(Math.round(x * 100) / 100), pixel, height - 17);
     }
-    ctx.fillStyle = theme.text;
-    ctx.fillText(String(Math.round(x * 100) / 100), pixel, height - 17);
-  }
-  for (
-    let y = Math.ceil((view.yCenter - view.ySpan / 2) / yStep) * yStep;
-    y <= view.yCenter + view.ySpan / 2;
-    y += yStep
-  ) {
-    const pixel = py(y);
-    if (project.visuals.grid) {
-      ctx.strokeStyle = theme.grid;
-      ctx.beginPath();
-      ctx.moveTo(pad.left, pixel);
-      ctx.lineTo(width - pad.right, pixel);
-      ctx.stroke();
+  if (!simple)
+    for (
+      let y = Math.ceil((view.yCenter - view.ySpan / 2) / yStep) * yStep;
+      y <= view.yCenter + view.ySpan / 2;
+      y += yStep
+    ) {
+      const pixel = py(y);
+      if (project.visuals.grid) {
+        ctx.strokeStyle = theme.grid;
+        ctx.beginPath();
+        ctx.moveTo(pad.left, pixel);
+        ctx.lineTo(width - pad.right, pixel);
+        ctx.stroke();
+      }
+      ctx.fillStyle = theme.text;
+      ctx.fillText(String(Math.round(y * 100) / 100), 27, pixel + 4);
     }
-    ctx.fillStyle = theme.text;
-    ctx.fillText(String(Math.round(y * 100) / 100), 27, pixel + 4);
-  }
   ctx.strokeStyle = theme.axis;
   ctx.beginPath();
   if (py(0) > pad.top && py(0) < height - pad.bottom) {
@@ -88,17 +93,37 @@ export function drawGraph(
     ctx.lineTo(px(0), height - pad.bottom);
   }
   ctx.stroke();
+  if (simple) {
+    ctx.fillStyle = theme.axis;
+    const arrow = (x: number, y: number, up: boolean) => {
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + (up ? -4 : -10), y + (up ? 10 : -4));
+      ctx.lineTo(x + (up ? 4 : -10), y + (up ? 10 : 4));
+      ctx.closePath();
+      ctx.fill();
+    };
+    ctx.font = 'italic 17px "Times New Roman", serif';
+    if (py(0) > pad.top && py(0) < height - pad.bottom) {
+      arrow(width - pad.right, py(0), false);
+      ctx.fillText("x", width - pad.right + 13, py(0) + 5);
+    }
+    if (px(0) >= pad.left && px(0) < width - pad.right) {
+      arrow(px(0), pad.top, true);
+      ctx.fillText("y", px(0), pad.top - 12);
+    }
+  }
   ctx.fillStyle = theme.text;
   ctx.textAlign = "right";
-  ctx.fillText("x / beats", width - pad.right, 16);
+  if (!simple) ctx.fillText("x / beats", width - pad.right, 16);
   ctx.textAlign = "left";
-  ctx.fillText("f(x)", pad.left, 16);
+  if (!simple) ctx.fillText("f(x)", pad.left, 16);
   ctx.save();
   ctx.beginPath();
   ctx.rect(pad.left, pad.top, w, h);
   ctx.clip();
-  let drawn = curves;
-  if (project.visuals.combined && curves.length) {
+  let drawn = simple ? curves.filter((c) => c.id === selectedId) : curves;
+  if (!simple && project.visuals.combined && curves.length) {
     const values = new Float32Array(curves[0].values.length);
     for (let i = 0; i < values.length; i++) {
       values[i] = curves.reduce((sum, c) => {
@@ -110,16 +135,18 @@ export function drawGraph(
   }
   for (const curve of drawn) {
     const track = project.tracks.find((t) => t.id === curve.id);
-    if (track && !track.enabled) continue;
+    if (!simple && track && !track.enabled) continue;
     const section = project.sections.find(
       (s) => beat >= s.startBeat && beat < s.endBeat,
     );
     const active =
+      simple ||
       !track ||
       (!track.muted && (!section || section.activeTrackIds.includes(track.id)));
     const rawColor = track?.color ?? "#f0e7ff";
-    const color =
-      project.visuals.theme === "mono"
+    const color = simple
+      ? "#111111"
+      : project.visuals.theme === "mono"
         ? "#282832"
         : project.visuals.theme === "light"
           ? `#${[1, 3, 5]
@@ -131,10 +158,11 @@ export function drawGraph(
               .join("")}`
           : rawColor;
     ctx.strokeStyle = color;
-    ctx.lineWidth =
-      project.visuals.lineWidth + (track?.id === selectedId ? 0.4 : 0);
-    ctx.globalAlpha = active ? (playing ? 0.4 : 0.85) : 0.18;
-    if (project.visuals.glow || project.visuals.theme === "neon") {
+    ctx.lineWidth = simple
+      ? 1.8
+      : project.visuals.lineWidth + (track?.id === selectedId ? 0.4 : 0);
+    ctx.globalAlpha = simple ? 1 : active ? (playing ? 0.4 : 0.85) : 0.18;
+    if (!simple && (project.visuals.glow || project.visuals.theme === "neon")) {
       ctx.shadowColor = color;
       ctx.shadowBlur = 8;
     }
@@ -160,7 +188,7 @@ export function drawGraph(
     }
     ctx.stroke();
     ctx.shadowBlur = 0;
-    if (playing && active && beat > view.start) {
+    if (!simple && playing && active && beat > view.start) {
       ctx.save();
       const curvePath = new Path2D();
       let connected = false,
@@ -190,7 +218,11 @@ export function drawGraph(
       ctx.stroke(curvePath);
       ctx.restore();
     }
-    if (playing && beat >= view.start && beat <= view.start + view.span) {
+    if (
+      (playing || simple) &&
+      beat >= view.start &&
+      beat <= view.start + view.span
+    ) {
       const index = Math.round(
           ((beat - view.start) / view.span) * (curve.values.length - 1),
         ),
@@ -205,7 +237,7 @@ export function drawGraph(
     }
   }
   ctx.globalAlpha = 1;
-  if (beat >= view.start && beat <= view.start + view.span) {
+  if (!simple && beat >= view.start && beat <= view.start + view.span) {
     ctx.strokeStyle = theme.text;
     ctx.globalAlpha = 0.6;
     ctx.setLineDash([3, 5]);

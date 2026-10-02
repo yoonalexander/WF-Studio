@@ -42,6 +42,7 @@ import { Inspector, Field, Range } from "./components/Inspector";
 import { Timeline } from "./components/Timeline";
 import { Modal } from "./components/Modal";
 import { ExportDialog } from "./components/ExportDialog";
+import { SimpleStudio } from "./components/SimpleStudio";
 
 export default function App() {
   const {
@@ -58,6 +59,15 @@ export default function App() {
     load,
   } = useStudio();
   const [playing, setPlaying] = useState(false),
+    [viewMode, setViewMode] = useState<"simple" | "detailed">(() => {
+      try {
+        return localStorage.getItem("wave-function-view") === "detailed"
+          ? "detailed"
+          : "simple";
+      } catch {
+        return "simple";
+      }
+    }),
     [beat, setBeat] = useState(0),
     [modal, setModal] = useState<
       "examples" | "library" | "help" | "export" | "settings" | null
@@ -243,401 +253,448 @@ export default function App() {
     if (file.current) file.current.value = "";
   };
   const selected = project.tracks.find((t) => t.id === selectedId);
+  const switchView = (mode: "simple" | "detailed") => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem("wave-function-view", mode);
+    } catch {
+      /* View still works without storage. */
+    }
+  };
   return (
-    <div className="app" data-theme={project.visuals.theme}>
-      <header className="topbar">
-        <a
-          className="brand"
-          href="#"
-          onClick={(e) => e.preventDefault()}
-          aria-label="Wave Function Studio"
-        >
-          <span className="brand-mark">
-            <Activity size={25} />
-          </span>
-          <span>
-            Wave Function<small>MATH MUSIC STUDIO</small>
-          </span>
-        </a>
-        <div className="project-title">
-          <input
-            aria-label="Project name"
-            value={project.name}
-            maxLength={100}
-            onChange={(e) =>
-              change((p) => {
-                p.name = e.target.value || "Untitled composition";
-              }, "project-name")
-            }
-          />
-          <span className="save-status">
-            <i className={status.startsWith("Saved") ? "saved" : ""} />
-            {status}
-          </span>
-        </div>
-        <nav className="top-actions">
-          <button className="text-button" onClick={() => setModal("examples")}>
-            <Music2 size={16} />
-            <span>Examples</span>
-          </button>
-          <button className="text-button" onClick={() => void openLibrary()}>
-            <FolderOpen size={16} />
-            <span>Projects</span>
-          </button>
-          <button
-            className="icon-button"
-            aria-label="Help and equation reference"
-            onClick={() => setModal("help")}
-          >
-            <HelpCircle size={19} />
-          </button>
-          <button className="primary" onClick={() => setModal("export")}>
-            <Download size={16} />
-            <span>Export</span>
-          </button>
-        </nav>
-      </header>
-      {welcome && (
-        <section className="welcome">
-          <div className="welcome-copy">
-            <span className="eyebrow">
-              A LITTLE MATH. A LOT OF POSSIBILITY.
-            </span>
-            <h1>
-              Write equations.
-              <br />
-              <em>Hear the math.</em>
-            </h1>
-          </div>
-          <div className="welcome-right">
-            <p>
-              Turn a repeating function into a rhythm.
-              <br />
-              Layer a melody. Watch your composition take shape.
-            </p>
-            <button className="primary" onClick={() => void toggle()}>
-              <Play size={16} fill="currentColor" />
-              Play the example
-            </button>
-            <button className="text-button" onClick={() => setWelcome(false)}>
-              Open studio <ChevronRight size={16} />
-            </button>
-          </div>
-          <button
-            className="dismiss icon-button"
-            aria-label="Dismiss welcome"
-            onClick={() => setWelcome(false)}
-          >
-            <X size={16} />
-          </button>
-          <div className="welcome-equation" aria-hidden="true">
-            f(x) → ♫
-          </div>
-        </section>
-      )}
-      <div className="transport">
-        <div className="transport-buttons">
-          <button
-            className="play-button"
-            aria-label={playing ? "Pause" : "Play"}
-            disabled={!ready}
-            onClick={() => void toggle()}
-          >
-            {playing ? (
-              <Pause size={19} fill="currentColor" />
-            ) : (
-              <Play size={19} fill="currentColor" />
-            )}
-          </button>
-          <button
-            className="icon-button"
-            aria-label="Stop"
-            onClick={() => {
-              audio.stop();
-              setPlaying(false);
-              setBeat(audio.position());
-            }}
-          >
-            <Square size={16} fill="currentColor" />
-          </button>
-          <button
-            className="icon-button"
-            aria-label="Restart"
-            onClick={() =>
-              seek(project.loop.enabled ? project.loop.startBeat : 0)
-            }
-          >
-            <RotateCcw size={17} />
-          </button>
-        </div>
-        <div className="position">
-          <strong>
-            {String(Math.floor(beat / project.beatsPerBar) + 1).padStart(
-              2,
-              "0",
-            )}
-            <span>:</span>
-            {String(Math.floor(beat % project.beatsPerBar) + 1).padStart(
-              2,
-              "0",
-            )}
-            <span>:</span>
-            {String(Math.floor((beat % 1) * 100)).padStart(2, "0")}
-          </strong>
-          <small>BAR · BEAT · POSITION</small>
-        </div>
-        <label className="bpm">
-          <input
-            aria-label="BPM"
-            type="number"
-            min={30}
-            max={300}
-            value={project.bpm}
-            onChange={(e) =>
-              change((p) => {
-                p.bpm = Math.max(
-                  30,
-                  Math.min(300, Number(e.target.value) || 30),
-                );
-              }, "bpm")
-            }
-          />
-          <span>BPM</span>
-        </label>
-        <button
-          className={`icon-button ${audio.metronome ? "active" : ""}`}
-          aria-label="Metronome"
-          aria-pressed={audio.metronome}
-          onClick={() => {
-            audio.metronome = !audio.metronome;
-            setBeat(audio.position());
-          }}
-        >
-          <Radio size={17} />
-        </button>
-        <div className="transport-loop">
-          <button
-            className={`icon-button ${project.loop.enabled ? "active" : ""}`}
-            aria-label="Loop"
-            aria-pressed={project.loop.enabled}
-            onClick={() =>
-              change((p) => {
-                p.loop.enabled = !p.loop.enabled;
-              })
-            }
-          >
-            <Repeat2 size={19} />
-          </button>
-          <label>
-            From
-            <input
-              aria-label="Loop start beat"
-              type="number"
-              min={0}
-              max={project.loop.endBeat - 1}
-              step={1}
-              value={project.loop.startBeat}
-              onChange={(e) =>
-                change((p) => {
-                  p.loop.startBeat = Math.max(
-                    0,
-                    Math.min(
-                      p.loop.endBeat - 1,
-                      Math.round(Number(e.target.value)),
-                    ),
-                  );
-                })
-              }
-            />
-          </label>
-          <label>
-            to
-            <input
-              aria-label="Loop end beat"
-              type="number"
-              min={project.loop.startBeat + 1}
-              max={project.lengthBeats}
-              step={1}
-              value={project.loop.endBeat}
-              onChange={(e) =>
-                change((p) => {
-                  p.loop.endBeat = Math.min(
-                    p.lengthBeats,
-                    Math.max(
-                      p.loop.startBeat + 1,
-                      Math.round(Number(e.target.value)),
-                    ),
-                  );
-                })
-              }
-            />
-          </label>
-          <span className="subtle">beats</span>
-        </div>
-        <div className="spacer" />
-        <div className="history">
-          <button
-            className="icon-button"
-            aria-label="Undo"
-            disabled={!past.length}
-            onClick={undo}
-          >
-            <Undo2 size={17} />
-          </button>
-          <button
-            className="icon-button"
-            aria-label="Redo"
-            disabled={!future.length}
-            onClick={redo}
-          >
-            <Redo2 size={17} />
-          </button>
-        </div>
-        <button
-          className="icon-button"
-          aria-label="Visual and project settings"
-          onClick={() => setModal("settings")}
-        >
-          <SlidersHorizontal size={18} />
-        </button>
-      </div>
-      <main className="studio">
-        <aside className="tracks-panel">
-          <div className="tracks-heading">
-            <h2>Equation tracks</h2>
-            <span className="count">{project.tracks.length}/32</span>
-          </div>
-          <div className="track-list">
-            {project.tracks.map((t, i) => (
-              <div
-                key={t.id}
-                className={`track-card ${t.id === selectedId ? "selected" : ""} ${t.muted || !t.enabled ? "muted" : ""}`}
-                style={{ "--track": t.color } as React.CSSProperties}
+    <div
+      className={`app ${viewMode === "simple" ? "simple-app" : ""}`}
+      data-theme={viewMode === "simple" ? "simple" : project.visuals.theme}
+    >
+      {viewMode === "simple" ? (
+        <SimpleStudio
+          engine={engine}
+          playing={playing}
+          ready={ready}
+          status={status}
+          onPlay={() => void toggle()}
+          onSeek={seek}
+          onError={notify}
+          onDetailed={() => switchView("detailed")}
+          onExamples={() => setModal("examples")}
+          onHelp={() => setModal("help")}
+        />
+      ) : (
+        <>
+          <header className="topbar">
+            <a
+              className="brand"
+              href="#"
+              onClick={(e) => e.preventDefault()}
+              aria-label="Wave Function Studio"
+            >
+              <span className="brand-mark">
+                <Activity size={25} />
+              </span>
+              <span>
+                Wave Function<small>MATH MUSIC STUDIO</small>
+              </span>
+            </a>
+            <div className="project-title">
+              <input
+                aria-label="Project name"
+                value={project.name}
+                maxLength={100}
+                onChange={(e) =>
+                  change((p) => {
+                    p.name = e.target.value || "Untitled composition";
+                  }, "project-name")
+                }
+              />
+              <span className="save-status">
+                <i className={status.startsWith("Saved") ? "saved" : ""} />
+                {status}
+              </span>
+            </div>
+            <nav className="top-actions">
+              <button
+                className="text-button view-switch"
+                onClick={() => switchView("simple")}
               >
-                <button
-                  className="track-select"
-                  aria-label={`Select ${t.name}`}
-                  onClick={() => select(t.id)}
-                >
-                  <span className="track-number">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <span className="track-info">
-                    <strong>{t.name}</strong>
-                    <small>
-                      {t.instrument} · {t.mapping}
-                    </small>
-                  </span>
-                  <AudioLines size={18} />
-                </button>
-                <div className="track-expression" title={t.expression}>
-                  {t.symbol}(x) = {t.expression}
-                </div>
-                <div className="track-controls">
-                  <span
-                    className={engine.errors[t.id] ? "error-indicator" : ""}
-                  >
-                    {engine.errors[t.id] ? "Check equation" : `${t.symbol}(x)`}
-                  </span>
-                  <button
-                    className={t.muted ? "lit" : ""}
-                    aria-label={`Mute ${t.name}`}
-                    aria-pressed={t.muted}
-                    onClick={() => track(t.id, { muted: !t.muted })}
-                  >
-                    M
-                  </button>
-                  <button
-                    className={t.solo ? "solo lit" : ""}
-                    aria-label={`Solo ${t.name}`}
-                    aria-pressed={t.solo}
-                    onClick={() => track(t.id, { solo: !t.solo })}
-                  >
-                    S
-                  </button>
-                </div>
-              </div>
-            ))}
-            {!project.tracks.length && (
-              <div className="empty-tracks">
-                <Music2 size={28} />
-                <p>
-                  A blank canvas.
+                Simple view
+              </button>
+              <button
+                className="text-button"
+                aria-label="Examples"
+                onClick={() => setModal("examples")}
+              >
+                <Music2 size={16} />
+                <span>Examples</span>
+              </button>
+              <button
+                className="text-button"
+                aria-label="Projects"
+                onClick={() => void openLibrary()}
+              >
+                <FolderOpen size={16} />
+                <span>Projects</span>
+              </button>
+              <button
+                className="icon-button"
+                aria-label="Help and equation reference"
+                onClick={() => setModal("help")}
+              >
+                <HelpCircle size={19} />
+              </button>
+              <button className="primary" onClick={() => setModal("export")}>
+                <Download size={16} />
+                <span>Export</span>
+              </button>
+            </nav>
+          </header>
+          {welcome && (
+            <section className="welcome">
+              <div className="welcome-copy">
+                <span className="eyebrow">
+                  A LITTLE MATH. A LOT OF POSSIBILITY.
+                </span>
+                <h1>
+                  Write equations.
                   <br />
-                  Add an instrument below.
+                  <em>Hear the math.</em>
+                </h1>
+              </div>
+              <div className="welcome-right">
+                <p>
+                  Turn a repeating function into a rhythm.
+                  <br />
+                  Layer a melody. Watch your composition take shape.
+                </p>
+                <button className="primary" onClick={() => void toggle()}>
+                  <Play size={16} fill="currentColor" />
+                  Play the example
+                </button>
+                <button
+                  className="text-button"
+                  onClick={() => setWelcome(false)}
+                >
+                  Open studio <ChevronRight size={16} />
+                </button>
+              </div>
+              <button
+                className="dismiss icon-button"
+                aria-label="Dismiss welcome"
+                onClick={() => setWelcome(false)}
+              >
+                <X size={16} />
+              </button>
+              <div className="welcome-equation" aria-hidden="true">
+                f(x) → ♫
+              </div>
+            </section>
+          )}
+          <div className="transport">
+            <div className="transport-buttons">
+              <button
+                className="play-button"
+                aria-label={playing ? "Pause" : "Play"}
+                disabled={!ready}
+                onClick={() => void toggle()}
+              >
+                {playing ? (
+                  <Pause size={19} fill="currentColor" />
+                ) : (
+                  <Play size={19} fill="currentColor" />
+                )}
+              </button>
+              <button
+                className="icon-button"
+                aria-label="Stop"
+                onClick={() => {
+                  audio.stop();
+                  setPlaying(false);
+                  setBeat(audio.position());
+                }}
+              >
+                <Square size={16} fill="currentColor" />
+              </button>
+              <button
+                className="icon-button"
+                aria-label="Restart"
+                onClick={() =>
+                  seek(project.loop.enabled ? project.loop.startBeat : 0)
+                }
+              >
+                <RotateCcw size={17} />
+              </button>
+            </div>
+            <div className="position">
+              <strong>
+                {String(Math.floor(beat / project.beatsPerBar) + 1).padStart(
+                  2,
+                  "0",
+                )}
+                <span>:</span>
+                {String(Math.floor(beat % project.beatsPerBar) + 1).padStart(
+                  2,
+                  "0",
+                )}
+                <span>:</span>
+                {String(Math.floor((beat % 1) * 100)).padStart(2, "0")}
+              </strong>
+              <small>BAR · BEAT · POSITION</small>
+            </div>
+            <label className="bpm">
+              <input
+                aria-label="BPM"
+                type="number"
+                min={30}
+                max={300}
+                value={project.bpm}
+                onChange={(e) =>
+                  change((p) => {
+                    p.bpm = Math.max(
+                      30,
+                      Math.min(300, Number(e.target.value) || 30),
+                    );
+                  }, "bpm")
+                }
+              />
+              <span>BPM</span>
+            </label>
+            <button
+              className={`icon-button ${audio.metronome ? "active" : ""}`}
+              aria-label="Metronome"
+              aria-pressed={audio.metronome}
+              onClick={() => {
+                audio.metronome = !audio.metronome;
+                setBeat(audio.position());
+              }}
+            >
+              <Radio size={17} />
+            </button>
+            <div className="transport-loop">
+              <button
+                className={`icon-button ${project.loop.enabled ? "active" : ""}`}
+                aria-label="Loop"
+                aria-pressed={project.loop.enabled}
+                onClick={() =>
+                  change((p) => {
+                    p.loop.enabled = !p.loop.enabled;
+                  })
+                }
+              >
+                <Repeat2 size={19} />
+              </button>
+              <label>
+                From
+                <input
+                  aria-label="Loop start beat"
+                  type="number"
+                  min={0}
+                  max={project.loop.endBeat - 1}
+                  step={1}
+                  value={project.loop.startBeat}
+                  onChange={(e) =>
+                    change((p) => {
+                      p.loop.startBeat = Math.max(
+                        0,
+                        Math.min(
+                          p.loop.endBeat - 1,
+                          Math.round(Number(e.target.value)),
+                        ),
+                      );
+                    })
+                  }
+                />
+              </label>
+              <label>
+                to
+                <input
+                  aria-label="Loop end beat"
+                  type="number"
+                  min={project.loop.startBeat + 1}
+                  max={project.lengthBeats}
+                  step={1}
+                  value={project.loop.endBeat}
+                  onChange={(e) =>
+                    change((p) => {
+                      p.loop.endBeat = Math.min(
+                        p.lengthBeats,
+                        Math.max(
+                          p.loop.startBeat + 1,
+                          Math.round(Number(e.target.value)),
+                        ),
+                      );
+                    })
+                  }
+                />
+              </label>
+              <span className="subtle">beats</span>
+            </div>
+            <div className="spacer" />
+            <div className="history">
+              <button
+                className="icon-button"
+                aria-label="Undo"
+                disabled={!past.length}
+                onClick={undo}
+              >
+                <Undo2 size={17} />
+              </button>
+              <button
+                className="icon-button"
+                aria-label="Redo"
+                disabled={!future.length}
+                onClick={redo}
+              >
+                <Redo2 size={17} />
+              </button>
+            </div>
+            <button
+              className="icon-button"
+              aria-label="Visual and project settings"
+              onClick={() => setModal("settings")}
+            >
+              <SlidersHorizontal size={18} />
+            </button>
+          </div>
+          <main className="studio">
+            <aside className="tracks-panel">
+              <div className="tracks-heading">
+                <h2>Equation tracks</h2>
+                <span className="count">{project.tracks.length}/32</span>
+              </div>
+              <div className="track-list">
+                {project.tracks.map((t, i) => (
+                  <div
+                    key={t.id}
+                    className={`track-card ${t.id === selectedId ? "selected" : ""} ${t.muted || !t.enabled ? "muted" : ""}`}
+                    style={{ "--track": t.color } as React.CSSProperties}
+                  >
+                    <button
+                      className="track-select"
+                      aria-label={`Select ${t.name}`}
+                      onClick={() => select(t.id)}
+                    >
+                      <span className="track-number">
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <span className="track-info">
+                        <strong>{t.name}</strong>
+                        <small>
+                          {t.instrument} · {t.mapping}
+                        </small>
+                      </span>
+                      <AudioLines size={18} />
+                    </button>
+                    <div className="track-expression" title={t.expression}>
+                      {t.symbol}(x) = {t.expression}
+                    </div>
+                    <div className="track-controls">
+                      <span
+                        className={engine.errors[t.id] ? "error-indicator" : ""}
+                      >
+                        {engine.errors[t.id]
+                          ? "Check equation"
+                          : `${t.symbol}(x)`}
+                      </span>
+                      <button
+                        className={t.muted ? "lit" : ""}
+                        aria-label={`Mute ${t.name}`}
+                        aria-pressed={t.muted}
+                        onClick={() => track(t.id, { muted: !t.muted })}
+                      >
+                        M
+                      </button>
+                      <button
+                        className={t.solo ? "solo lit" : ""}
+                        aria-label={`Solo ${t.name}`}
+                        aria-pressed={t.solo}
+                        onClick={() => track(t.id, { solo: !t.solo })}
+                      >
+                        S
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {!project.tracks.length && (
+                  <div className="empty-tracks">
+                    <Music2 size={28} />
+                    <p>
+                      A blank canvas.
+                      <br />
+                      Add an instrument below.
+                    </p>
+                  </div>
+                )}
+              </div>
+              <div className="add-track">
+                <select
+                  aria-label="New track instrument"
+                  value={addType}
+                  onChange={(e) =>
+                    setAddType(e.target.value as Track["instrument"])
+                  }
+                >
+                  {[
+                    "kick",
+                    "bass",
+                    "hat",
+                    "synth",
+                    "snare",
+                    "open-hat",
+                    "clap",
+                  ].map((t) => (
+                    <option key={t} value={t}>
+                      {t === "synth"
+                        ? "Lead synth"
+                        : t[0].toUpperCase() + t.slice(1)}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  className="secondary"
+                  disabled={project.tracks.length >= 32}
+                  onClick={() => add(addType)}
+                >
+                  <Plus size={16} />
+                  Add track
+                </button>
+              </div>
+              <div className="sidebar-note">
+                <span>ONE UNIT = ONE BEAT</span>
+                <p>
+                  Patterns repeat. Functions combine.
+                  <br />
+                  Your equations are the score.
                 </p>
               </div>
-            )}
-          </div>
-          <div className="add-track">
-            <select
-              aria-label="New track instrument"
-              value={addType}
-              onChange={(e) =>
-                setAddType(e.target.value as Track["instrument"])
-              }
-            >
-              {[
-                "kick",
-                "bass",
-                "hat",
-                "synth",
-                "snare",
-                "open-hat",
-                "clap",
-              ].map((t) => (
-                <option key={t} value={t}>
-                  {t === "synth"
-                    ? "Lead synth"
-                    : t[0].toUpperCase() + t.slice(1)}
-                </option>
-              ))}
-            </select>
-            <button
-              className="secondary"
-              disabled={project.tracks.length >= 32}
-              onClick={() => add(addType)}
-            >
-              <Plus size={16} />
-              Add track
-            </button>
-          </div>
-          <div className="sidebar-note">
-            <span>ONE UNIT = ONE BEAT</span>
-            <p>
-              Patterns repeat. Functions combine.
-              <br />
-              Your equations are the score.
-            </p>
-          </div>
-        </aside>
-        <div className="graph-area">
-          <Graph playing={playing} onSeek={seek} onError={notify} />
-          <div className="value-strip">
-            <span className="live-dot" />
-            <span>{playing ? "PLAYING" : "READY TO PLAY"}</span>
-            <div className="spacer" />
+            </aside>
+            <div className="graph-area">
+              <Graph playing={playing} onSeek={seek} onError={notify} />
+              <div className="value-strip">
+                <span className="live-dot" />
+                <span>{playing ? "PLAYING" : "READY TO PLAY"}</span>
+                <div className="spacer" />
+                <span>
+                  {selected
+                    ? `${selected.symbol}(${beat.toFixed(2)}) = ${Number.isFinite(engine.value(selected.id, beat)) ? engine.value(selected.id, beat).toFixed(3) : "undefined"}`
+                    : "Select an equation"}
+                </span>
+              </div>
+            </div>
+            <Inspector engine={engine} />
+          </main>
+          <Timeline beat={beat} onSeek={seek} />
+          <footer className="app-footer">
             <span>
-              {selected
-                ? `${selected.symbol}(${beat.toFixed(2)}) = ${Number.isFinite(engine.value(selected.id, beat)) ? engine.value(selected.id, beat).toFixed(3) : "undefined"}`
-                : "Select an equation"}
+              <Check size={13} />
+              No account. No uploads. Saved locally.
             </span>
-          </div>
-        </div>
-        <Inspector engine={engine} />
-      </main>
-      <Timeline beat={beat} onSeek={seek} />
-      <footer className="app-footer">
-        <span>
-          <Check size={13} />
-          No account. No uploads. Saved locally.
-        </span>
-        <button onClick={() => setModal("help")}>
-          <Keyboard size={13} />
-          Space to play · Ctrl Z to undo
-        </button>
-        <span>Wave Function / v1.0</span>
-      </footer>
+            <button onClick={() => setModal("help")}>
+              <Keyboard size={13} />
+              Space to play · Ctrl Z to undo
+            </button>
+            <span>Wave Function / v1.0</span>
+          </footer>
+        </>
+      )}
       <input
         type="file"
         accept=".json,.wf.json"
