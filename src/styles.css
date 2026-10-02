@@ -2126,6 +2126,31 @@ body:has(.simple-app) {
 .view-switch {
   white-space: nowrap;
 }
+@media (min-width: 651px) and (max-height: 900px) {
+  .simple-header {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+  .simple-studio {
+    padding-bottom: 12px;
+  }
+  .simple-graph {
+    height: clamp(190px, calc(100dvh - 610px), 320px);
+  }
+  .simple-notation {
+    min-height: 48px;
+    padding-bottom: 6px;
+  }
+  .simple-sounds {
+    margin-bottom: 8px;
+  }
+  .simple-add-sound {
+    margin-top: 8px;
+  }
+  .simple-sound-settings {
+    margin: 6px 0;
+  }
+}
 @media (max-width: 650px) {
   .simple-header {
     padding: 20px 22px;

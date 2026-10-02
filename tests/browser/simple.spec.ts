@@ -240,12 +240,20 @@ test("compose from scratch in simple mode, fit the whole loop and show actual os
   await expect(page.getByLabel("Project name")).toHaveValue("My first loop");
   await expect(page.locator(".simple-sound")).toHaveCount(2);
   await expect(page.getByLabel("Loop length")).toHaveValue("4");
+  await page.setViewportSize({ width: 1366, height: 768 });
   await expect(page.locator(".simple-graph")).toHaveAttribute("data-span", "4");
   await expect
     .poll(() =>
       page.locator(".simple-graph").getAttribute("data-y-max").then(Number),
     )
     .toBeGreaterThan(12);
+  const composerBottom = await page
+    .locator(".simple-bottom")
+    .evaluate((e) => e.getBoundingClientRect().bottom);
+  expect(composerBottom).toBeLessThanOrEqual(768);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollHeight),
+  ).toBeLessThanOrEqual(768);
   await page.screenshot({ path: ".local/simple-composer.png", fullPage: true });
 });
 
