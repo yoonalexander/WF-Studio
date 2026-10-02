@@ -13,6 +13,7 @@ export function Graph({
   simple = false,
   minimal = false,
   transport = audio,
+  onSampled,
 }: {
   playing: boolean;
   onSeek: (beat: number) => void;
@@ -20,6 +21,7 @@ export function Graph({
   simple?: boolean;
   minimal?: boolean;
   transport?: Pick<typeof audio, "position" | "soundingNotes">;
+  onSampled?: () => void;
 }) {
   const project = useStudio((s) => s.project),
     selectedId = useStudio((s) => s.selectedId),
@@ -31,6 +33,7 @@ export function Graph({
     events = useRef<MusicEvent[]>([]),
     request = useRef(0),
     timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const workerWarm = useRef(false);
   const [view, setView] = useState<View>(() =>
       simple
         ? fitComposition(project, [], minimal)
@@ -45,6 +48,7 @@ export function Graph({
     simple,
     minimal,
     transport,
+    onSampled,
   });
   state.current = {
     project,
@@ -54,12 +58,14 @@ export function Graph({
     simple,
     minimal,
     transport,
+    onSampled,
   };
   const factory = useRef<() => Worker>(() => {
     throw new Error("Worker is not initialized.");
   });
   useEffect(() => {
     const create = () => {
+      workerWarm.current = false;
       const w = new Worker(new URL("../graph.worker.ts", import.meta.url), {
         type: "module",
       });
@@ -68,6 +74,7 @@ export function Graph({
         clearTimeout(timer.current);
         curves.current = e.data.samples;
         events.current = e.data.events ?? [];
+        workerWarm.current = true;
         if (state.current.simple)
           setView(
             fitComposition(
@@ -77,6 +84,7 @@ export function Graph({
             ),
           );
         setSampling(false);
+        state.current.onSampled?.();
       };
       w.onerror = () => {
         clearTimeout(timer.current);
@@ -114,14 +122,17 @@ export function Graph({
       count: Math.min(1800, Math.max(600, canvas.current?.clientWidth ?? 900)),
     });
     clearTimeout(timer.current);
-    timer.current = setTimeout(() => {
-      worker.current?.terminate();
-      worker.current = undefined;
-      setSampling(false);
-      onError(
-        "This graph exceeded the sampling time limit. Simplify the expression to retry.",
-      );
-    }, 5000);
+    timer.current = setTimeout(
+      () => {
+        worker.current?.terminate();
+        worker.current = undefined;
+        setSampling(false);
+        onError(
+          "This graph exceeded the sampling time limit. Simplify the expression to retry.",
+        );
+      },
+      workerWarm.current ? 5000 : 15000,
+    );
   }, [
     equations,
     sampleStart,

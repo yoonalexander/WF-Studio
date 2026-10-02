@@ -1,5 +1,36 @@
 import { test, expect } from "@playwright/test";
 
+test("a slow initial graph download cannot start sound before the curve is ready", async ({
+  page,
+}) => {
+  await page.route(/graph\.worker/, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 5500));
+    await route.continue();
+  });
+  await page.goto("/");
+  await expect(
+    page.getByRole("button", { name: "Play", exact: true }),
+  ).toBeDisabled();
+  await page.keyboard.press("Space");
+  await expect(
+    page.getByRole("button", { name: "Pause", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Play", exact: true }),
+  ).toBeEnabled({ timeout: 20000 });
+  await expect
+    .poll(() =>
+      page.locator(".simple-graph").getAttribute("data-y-max").then(Number),
+    )
+    .toBeGreaterThan(4.9);
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await page.getByRole("button", { name: "Play", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Pause", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Pause", exact: true }).click();
+});
+
 test("one equation is the default, with song studio isolated and saved songs preserved", async ({
   page,
 }) => {

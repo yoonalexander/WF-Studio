@@ -13,6 +13,7 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
   const { project, load, track: update } = useStudio();
   const [ready, setReady] = useState(false),
     [playing, setPlaying] = useState(false);
+  const [graphReady, setGraphReady] = useState(false);
   const [editing, setEditing] = useState(false),
     [message, setMessage] = useState("");
   useEffect(() => {
@@ -47,6 +48,8 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
   }, [project, ready]);
   const changeExpression = (expression: string) => {
     if (!track) return;
+    setGraphReady(false);
+    setMessage("");
     update(track.id, { expression });
     try {
       localStorage.setItem(draftKey, expression);
@@ -60,14 +63,14 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
       setPlaying(false);
       return;
     }
+    if (!ready || !graphReady || error) return;
     try {
       await continuousAudio.play(useStudio.getState().project);
       setPlaying(continuousAudio.playing);
-      setMessage("");
     } catch {
       setMessage("Sound could not start. Press Play to try again.");
     }
-  }, []);
+  }, [ready, graphReady, error]);
   useEffect(() => {
     const keys = (e: KeyboardEvent) => {
       if (
@@ -93,6 +96,7 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
         })
       : "";
   const notify = useCallback((s: string) => setMessage(s), []);
+  const sampled = useCallback(() => setGraphReady(true), []);
   return (
     <div className="app simple-app equation-page" data-theme="simple">
       <header className="equation-header">
@@ -116,6 +120,7 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
             transport={continuousAudio}
             onSeek={(beat) => continuousAudio.seek(beat)}
             onError={notify}
+            onSampled={sampled}
           />
         )}
         <div
@@ -163,7 +168,7 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
             <button
               className="equation-play"
               aria-label={playing ? "Pause" : "Play"}
-              disabled={!ready || (!playing && !!error)}
+              disabled={!ready || (!playing && (!graphReady || !!error))}
               onClick={() => {
                 if (!error) setEditing(false);
                 void toggle();
@@ -174,7 +179,11 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
               ) : (
                 <Play size={12} fill="currentColor" />
               )}
-              {playing ? "Pause" : "Play"}
+              {playing
+                ? "Pause"
+                : !graphReady && !message
+                  ? "Loading…"
+                  : "Play"}
             </button>
             <span>
               {editing
