@@ -10,6 +10,9 @@ import { EquationEditor } from "./EquationEditor";
 import { randomEquation } from "../random-equation";
 import { BoundsEditor } from "./BoundsEditor";
 import { readCases, writeCases } from "../bounds";
+import { SoundPicker } from "./SoundPicker";
+import { soundKey, soundPreset } from "../sounds";
+import type { SoundId } from "../sounds";
 
 const draftKey = "wf-one-equation";
 const themeKey = "wf-equation-theme";
@@ -19,6 +22,13 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
     [playing, setPlaying] = useState(false);
   const [graphReady, setGraphReady] = useState(false);
   const [boundsEditing, setBoundsEditing] = useState(false);
+  const [sound, setSound] = useState<SoundId>(() => {
+    try {
+      return soundPreset(localStorage.getItem(soundKey)).id;
+    } catch {
+      return "electro";
+    }
+  });
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     try {
       return localStorage.getItem(themeKey) === "dark" ? "dark" : "light";
@@ -65,6 +75,9 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
   useEffect(() => {
     if (ready) continuousAudio.update(project);
   }, [project, ready]);
+  useEffect(() => {
+    continuousAudio.setSound(sound);
+  }, [sound]);
   const changeExpression = (expression: string) => {
     if (!track) return;
     setGraphReady(false);
@@ -264,6 +277,17 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
               <Dices size={16} />
               Random
             </button>
+            <SoundPicker
+              value={sound}
+              onChange={(id) => {
+                setSound(id);
+                try {
+                  localStorage.setItem(soundKey, id);
+                } catch {
+                  /* Storage is optional. */
+                }
+              }}
+            />
             <span>
               {editing
                 ? "Enter to finish. x is time; y is pitch."

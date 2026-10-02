@@ -2241,6 +2241,185 @@ body:has(.simple-app) {
   text-align: center;
   margin-top: 12px;
 }
+.sound-picker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text);
+}
+.sound-wheel {
+  position: relative;
+  width: 148px;
+  height: 52px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--hover);
+  overflow: hidden;
+}
+.sound-wheel-window {
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  mask-image: linear-gradient(transparent, #000 28%, #000 72%, transparent);
+}
+.sound-wheel-strip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding-left: 13px;
+  animation: sound-roll-down 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.sound-wheel-strip[data-direction="up"] {
+  animation-name: sound-roll-up;
+}
+.sound-wheel-strip > span {
+  height: 15px;
+  line-height: 15px;
+  font-size: 9px;
+  color: var(--muted);
+}
+.sound-wheel-strip > strong {
+  height: 20px;
+  line-height: 20px;
+  font-size: 11px;
+  font-weight: 500;
+}
+.sound-wheel-up,
+.sound-wheel-down {
+  position: absolute;
+  right: 0;
+  left: 0;
+  display: flex;
+  justify-content: flex-end;
+  padding-right: 10px;
+  color: var(--muted);
+}
+.sound-wheel-up {
+  top: 0;
+  height: 17px;
+  align-items: center;
+}
+.sound-wheel-down {
+  top: 17px;
+  bottom: 0;
+  align-items: flex-end;
+  padding-bottom: 4px;
+}
+.sound-wheel button:hover {
+  color: var(--text);
+}
+.sound-wheel button:focus-visible {
+  outline-offset: -3px;
+  border-radius: 8px;
+}
+.sound-expand {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 36px;
+  border-radius: 6px;
+  color: var(--muted);
+}
+.sound-expand:hover,
+.sound-expand[aria-expanded="true"] {
+  background: var(--hover);
+  color: var(--text);
+}
+.sound-options {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 12px);
+  width: 244px;
+  max-width: calc(100vw - 32px);
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: 0 8px 32px #00000016;
+  z-index: 30;
+  transform-origin: bottom right;
+  animation: sound-options-in 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.sound-options-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px 4px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.sound-options-heading button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+}
+.sound-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px;
+  border-radius: 6px;
+  text-align: left;
+}
+.sound-option > span {
+  display: grid;
+  gap: 2px;
+}
+.sound-option strong {
+  font-size: 11px;
+  font-weight: 500;
+}
+.sound-option small {
+  font-size: 9px;
+  color: var(--muted);
+}
+.sound-option:hover,
+.sound-option[aria-pressed="true"] {
+  background: var(--hover);
+}
+@keyframes sound-roll-down {
+  from {
+    transform: translateY(17px);
+    opacity: 0.3;
+    filter: blur(1px);
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+@keyframes sound-roll-up {
+  from {
+    transform: translateY(-17px);
+    opacity: 0.3;
+    filter: blur(1px);
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+@keyframes sound-options-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sound-wheel-strip,
+  .sound-options {
+    animation: none;
+  }
+}
 .equation-bounds {
   font-size: 11px;
   min-height: 36px;
@@ -2342,7 +2521,10 @@ body:has(.simple-app) {
 }
 @media (max-width: 650px) {
   .equation-page:has(.bounds-editor, .cm-editor) .simple-graph {
-    height: clamp(160px, 28dvh, 220px);
+    height: clamp(160px, 25dvh, 220px);
+  }
+  .bounds-rows {
+    max-height: 144px;
   }
   .bounds-row {
     display: grid;
@@ -2385,7 +2567,7 @@ body:has(.simple-app) {
     padding: 0 12px 36px;
   }
   .equation-page .simple-graph {
-    height: clamp(220px, 46dvh, 420px);
+    height: clamp(200px, 40dvh, 390px);
   }
   .one-equation {
     padding: 0 14px;
