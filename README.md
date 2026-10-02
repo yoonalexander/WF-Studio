@@ -28,7 +28,7 @@ To test a deployed build, set `WF_BASE_URL` to its origin before running browser
 
 ## Create a composition
 
-The default **Simple view** shows one black curve on white, with its formatted equation and an editable math input below. Play, tempo, equation selection, examples and help stay within reach. **Detailed studio** opens the full track editor, instruments, arrangement, project library and exports; both views edit the same project. Your view choice is remembered on this device.
+The default **Simple view** is a complete composing workspace on white. The graph automatically fits every equation and the entire loop. Curves show equations, hollow circles show scheduled notes, and filled circles show audio voices currently playing. Every sound has a visible status, mute and solo controls. Use **New song**, **Add sound** and the equation input to build your own music, then choose the instrument, mapping, tempo, scale, note interval and tone. Projects and exports are available here too. The simple examples are eight-beat loops with no hidden section changes; existing arrangements keep their sections and label when each sound enters. **Detailed studio** opens the full arrangement and visual editor; both views edit the same project. Your view choice is remembered on this device.
 
 1. Press Play on the starter composition, or open Projects → New project.
 2. Add a Kick and enter `exp(-8 * (x mod 1))`. Event → Trigger detects the rising edge at 0.8.

@@ -26,7 +26,13 @@ import {
 import { useStudio } from "./store";
 import { audio } from "./audio";
 import { createMathEngine } from "./math";
-import { exampleInfo, exampleProject } from "./examples";
+import {
+  exampleInfo,
+  exampleProject,
+  simpleExampleInfo,
+  simpleExampleProject,
+} from "./examples";
+import { newSimpleSong } from "./simple";
 import { newProject, validateProject } from "./model";
 import type { Project, Track } from "./model";
 import {
@@ -187,6 +193,7 @@ export default function App() {
       const target = e.target as HTMLElement;
       if (target.closest("input,textarea,select,.cm-editor,dialog")) return;
       if (e.code === "Space") {
+        if (target.closest("button,a")) return;
         e.preventDefault();
         void toggle();
       }
@@ -272,12 +279,21 @@ export default function App() {
           playing={playing}
           ready={ready}
           status={status}
+          beat={beat}
           onPlay={() => void toggle()}
+          onStop={() => {
+            audio.stop();
+            setPlaying(false);
+            seek(audio.position());
+          }}
           onSeek={seek}
           onError={notify}
           onDetailed={() => switchView("detailed")}
           onExamples={() => setModal("examples")}
           onHelp={() => setModal("help")}
+          onNew={() => void switchProject(newSimpleSong())}
+          onProjects={() => void openLibrary()}
+          onExport={() => setModal("export")}
         />
       ) : (
         <>
@@ -724,22 +740,30 @@ export default function App() {
             make it yours.
           </p>
           <div className="example-list">
-            {exampleInfo.map((e, i) => (
-              <button
-                key={e.name}
-                onClick={() => void switchProject(exampleProject(i))}
-              >
-                <div className={`example-art art-${i}`}>
-                  <Activity size={70} />
-                </div>
-                <div>
-                  <span className="eyebrow">{e.category}</span>
-                  <h3>{e.name}</h3>
-                  <p>{e.description}</p>
-                </div>
-                <ChevronRight size={20} />
-              </button>
-            ))}
+            {(viewMode === "simple" ? simpleExampleInfo : exampleInfo).map(
+              (e, i) => (
+                <button
+                  key={e.name}
+                  onClick={() =>
+                    void switchProject(
+                      viewMode === "simple"
+                        ? simpleExampleProject(i)
+                        : exampleProject(i),
+                    )
+                  }
+                >
+                  <div className={`example-art art-${i}`}>
+                    <Activity size={70} />
+                  </div>
+                  <div>
+                    <span className="eyebrow">{e.category}</span>
+                    <h3>{e.name}</h3>
+                    <p>{e.description}</p>
+                  </div>
+                  <ChevronRight size={20} />
+                </button>
+              ),
+            )}
           </div>
         </Modal>
       )}

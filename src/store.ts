@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { Project, Track } from "./model";
 import { makeTrack, MAX_TRACKS } from "./model";
-import { exampleProject } from "./examples";
+import { exampleProject, simpleExampleProject } from "./examples";
 interface State {
   project: Project;
   selectedId: string;
@@ -20,7 +20,15 @@ interface State {
 }
 let lastKey = "",
   lastTime = 0;
-const initial = exampleProject();
+const initial = (() => {
+  try {
+    if (localStorage.getItem("wave-function-view") === "detailed")
+      return exampleProject();
+  } catch {
+    /* Browser storage is optional. */
+  }
+  return simpleExampleProject();
+})();
 export const useStudio = create<State>((set, get) => ({
   project: initial,
   selectedId: initial.tracks[0].id,
@@ -62,8 +70,19 @@ export const useStudio = create<State>((set, get) => ({
   add: (type) => {
     if (get().project.tracks.length >= MAX_TRACKS) return;
     const t = makeTrack(type, get().project.tracks.length);
+    const symbol = {
+      synth: "M",
+      bass: "B",
+      kick: "K",
+      snare: "S",
+      hat: "H",
+      "open-hat": "O",
+      clap: "C",
+    }[type];
+    t.symbol = symbol;
+    let suffix = 2;
     while (get().project.tracks.some((v) => v.symbol === t.symbol))
-      t.symbol = `F${Math.floor(Math.random() * 9999)}`;
+      t.symbol = `${symbol}${suffix++}`;
     get().change((p) => {
       p.tracks.push(t);
       p.sections.forEach((s) => s.activeTrackIds.push(t.id));

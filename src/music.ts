@@ -11,6 +11,7 @@ export interface MusicEvent {
   velocity: number;
   cutoff: number;
   pan: number;
+  value?: number;
 }
 const scales = {
   chromatic: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
@@ -100,6 +101,7 @@ export function eventAt(
     velocity: track.mapping === "amplitude" ? normalized : 1,
     cutoff: track.mapping === "filter" ? 100 * 120 ** normalized : track.cutoff,
     pan: track.mapping === "pan" ? normalized * 2 - 1 : track.pan,
+    value: y,
   };
 }
 export function collectEvents(

@@ -189,11 +189,28 @@ export class AudioEngine {
   private stoppedBeat = 0;
   private nextTick = 0;
   private timer?: ReturnType<typeof setInterval>;
-  private voices = new Map<() => void, number>();
+  private voices = new Map<
+    () => void,
+    { start: number; end: number; event: MusicEvent }
+  >();
   private starting = false;
   private generation = 0;
   metronome = false;
   onEnd?: () => void;
+  soundingNotes(): MusicEvent[] {
+    if (!this.playing || !this.context || !this.project?.master) return [];
+    const now = this.context.currentTime;
+    return [...this.voices.values()]
+      .filter(
+        (v) =>
+          v.start <= now &&
+          v.end > now &&
+          v.event.velocity > 0 &&
+          (this.project?.tracks.find((t) => t.id === v.event.trackId)?.volume ??
+            0) > 0,
+      )
+      .map((v) => v.event);
+  }
   private normalize(beat: number) {
     const p = this.project;
     if (p?.loop.enabled && beat >= p.loop.endBeat)
@@ -303,8 +320,8 @@ export class AudioEngine {
     // Skip missed scheduling windows after tab suspension instead of bursting stale notes.
     if (this.nextTick / RESOLUTION < rawNow - 0.03)
       this.nextTick = Math.ceil(rawNow * RESOLUTION);
-    for (const [stop, end] of this.voices)
-      if (end < ctx.currentTime) this.voices.delete(stop);
+    for (const [stop, voice] of this.voices)
+      if (voice.end < ctx.currentTime) this.voices.delete(stop);
     while (
       this.anchorTime +
         ((this.nextTick / RESOLUTION - this.anchorBeat) * 60) / p.bpm <
@@ -334,7 +351,7 @@ export class AudioEngine {
               p.bpm,
               this.noise,
             );
-            this.voices.set(stop, stop.endsAt);
+            this.voices.set(stop, { start: at, end: stop.endsAt, event });
           }
         }
         if (this.metronome && Math.abs(beat - Math.round(beat)) < 0.001) {

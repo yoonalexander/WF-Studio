@@ -132,3 +132,38 @@ export function exampleProject(index = 0): Project {
   ];
   return p;
 }
+export const simpleExampleInfo = [
+  {
+    name: "Modulo club",
+    category: "DRUMS + BASS + MELODY",
+    description:
+      "A repeating 8-beat loop. All layers are active from the start. Mute a sound to hear what it contributes.",
+  },
+  {
+    name: "Sine garden",
+    category: "MELODY + BASS",
+    description:
+      "Smooth equations become notes every beat. Change the melody curve and hear its pitches change.",
+  },
+  {
+    name: "Piecewise playground",
+    category: "CONDITIONAL RHYTHMS",
+    description:
+      "An 8-beat loop with equation-controlled gaps. Note circles show exactly where each sound plays.",
+  },
+];
+export function simpleExampleProject(index = 0): Project {
+  const p = exampleProject(index);
+  p.sections = [];
+  p.lengthBeats = p.loop.endBeat = 8;
+  p.delay = 0;
+  if (index === 1) {
+    p.tracks = p.tracks.slice(0, 2);
+    p.tracks[0].expression = "4 + 3 * sin(x * pi / 4)";
+    p.tracks[0].attack = 0.015;
+    p.tracks[0].release = 0.15;
+    p.tracks[0].noteLength = 0.8;
+    p.tracks[1].attack = 0.015;
+  }
+  return p;
+}

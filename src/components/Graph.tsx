@@ -4,6 +4,8 @@ import { useStudio } from "../store";
 import { audio } from "../audio";
 import { drawGraph } from "../graph-render";
 import type { Curve, View } from "../graph-render";
+import type { MusicEvent } from "../music";
+import { compositionRange, fitComposition } from "../simple";
 export function Graph({
   playing,
   onSeek,
@@ -22,14 +24,14 @@ export function Graph({
     shell = useRef<HTMLDivElement>(null),
     worker = useRef<Worker | undefined>(undefined),
     curves = useRef<Curve[]>([]),
+    events = useRef<MusicEvent[]>([]),
     request = useRef(0),
     timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const [view, setView] = useState<View>({
-      start: simple ? -8 : 0,
-      span: 16,
-      yCenter: simple ? 0 : 2,
-      ySpan: simple ? 4 : 12,
-    }),
+  const [view, setView] = useState<View>(() =>
+      simple
+        ? fitComposition(project, [])
+        : { start: 0, span: 16, yCenter: 2, ySpan: 12 },
+    ),
     [sampling, setSampling] = useState(false);
   const state = useRef({ project, selectedId, view, playing, simple });
   state.current = { project, selectedId, view, playing, simple };
@@ -45,6 +47,9 @@ export function Graph({
         if (e.data.id !== request.current) return;
         clearTimeout(timer.current);
         curves.current = e.data.samples;
+        events.current = e.data.events ?? [];
+        if (state.current.simple)
+          setView(fitComposition(state.current.project, curves.current));
         setSampling(false);
       };
       w.onerror = () => {
@@ -64,6 +69,10 @@ export function Graph({
     };
   }, [onError]);
   const equations = JSON.stringify(project.tracks);
+  const range = compositionRange(project);
+  const sampleStart = simple ? range.start : view.start;
+  const sampleSpan = simple ? range.span : view.span;
+  const arrangement = JSON.stringify(project.sections);
   useEffect(() => {
     setSampling(true);
     const id = ++request.current;
@@ -72,8 +81,10 @@ export function Graph({
       id,
       tracks: project.tracks,
       beatsPerBar: project.beatsPerBar,
-      start: view.start,
-      span: view.span,
+      start: sampleStart,
+      span: sampleSpan,
+      project,
+      simple,
       count: Math.min(1800, Math.max(600, canvas.current?.clientWidth ?? 900)),
     });
     clearTimeout(timer.current);
@@ -85,7 +96,15 @@ export function Graph({
         "This graph exceeded the sampling time limit. Simplify the expression to retry.",
       );
     }, 5000);
-  }, [equations, view.start, view.span, project.beatsPerBar, onError]);
+  }, [
+    equations,
+    sampleStart,
+    sampleSpan,
+    project.beatsPerBar,
+    arrangement,
+    simple,
+    onError,
+  ]);
   useEffect(() => {
     let frame = 0,
       last = 0;
@@ -118,18 +137,18 @@ export function Graph({
             s.playing,
             s.selectedId,
             s.simple,
+            events.current,
+            audio.soundingNotes(),
           );
           if (
             s.playing &&
-            (s.simple || s.project.visuals.follow) &&
-            (beat > s.view.start + s.view.span ||
-              (s.simple && beat < s.view.start))
+            !s.simple &&
+            s.project.visuals.follow &&
+            beat > s.view.start + s.view.span
           ) {
             setView((v) => ({
               ...v,
-              start: s.simple
-                ? Math.floor((beat + v.span / 2) / v.span) * v.span - v.span / 2
-                : Math.floor(beat / v.span) * v.span,
+              start: Math.floor(beat / v.span) * v.span,
             }));
           }
         }
@@ -152,7 +171,14 @@ export function Graph({
       ySpan: Math.min(256, Math.max(2, v.ySpan * factor)),
     }));
   return (
-    <div className={`graph-panel ${simple ? "simple-graph" : ""}`} ref={shell}>
+    <div
+      className={`graph-panel ${simple ? "simple-graph" : ""}`}
+      ref={shell}
+      data-start={view.start}
+      data-span={view.span}
+      data-y-min={view.yCenter - view.ySpan / 2}
+      data-y-max={view.yCenter + view.ySpan / 2}
+    >
       <div className="panel-heading">
         {!simple && (
           <div>
@@ -164,34 +190,38 @@ export function Graph({
           <span className={`sample-state ${simple ? "sr-only" : ""}`}>
             {sampling ? "Sampling…" : "x = beats"}
           </span>
-          <button
-            className="icon-button"
-            aria-label="Zoom out"
-            onClick={() => zoom(1.5)}
-          >
-            <Minus size={16} />
-          </button>
-          <button
-            className="icon-button"
-            aria-label="Zoom in"
-            onClick={() => zoom(1 / 1.5)}
-          >
-            <Plus size={16} />
-          </button>
-          <button
-            className="icon-button"
-            aria-label="Reset graph view"
-            onClick={() =>
-              setView({
-                start: simple ? -8 : 0,
-                span: 16,
-                yCenter: simple ? 0 : 2,
-                ySpan: simple ? 4 : 12,
-              })
-            }
-          >
-            <Crosshair size={16} />
-          </button>
+          {!simple && (
+            <>
+              <button
+                className="icon-button"
+                aria-label="Zoom out"
+                onClick={() => zoom(1.5)}
+              >
+                <Minus size={16} />
+              </button>
+              <button
+                className="icon-button"
+                aria-label="Zoom in"
+                onClick={() => zoom(1 / 1.5)}
+              >
+                <Plus size={16} />
+              </button>
+              <button
+                className="icon-button"
+                aria-label="Reset graph view"
+                onClick={() =>
+                  setView({
+                    start: 0,
+                    span: 16,
+                    yCenter: 2,
+                    ySpan: 12,
+                  })
+                }
+              >
+                <Crosshair size={16} />
+              </button>
+            </>
+          )}
           <button
             className="icon-button"
             aria-label="Fullscreen graph"
@@ -209,7 +239,11 @@ export function Graph({
       </div>
       <canvas
         ref={canvas}
-        aria-label="Equation graph. Drag to pan; use zoom buttons. Click to move the playhead."
+        aria-label={
+          simple
+            ? "All sounds and notes, automatically fitted to the full loop. Click to move the playhead."
+            : "Equation graph. Drag to pan; use zoom buttons. Click to move the playhead."
+        }
         role="img"
         onPointerDown={(e) => {
           e.currentTarget.setPointerCapture(e.pointerId);
@@ -222,7 +256,7 @@ export function Graph({
         }}
         onPointerMove={(e) => {
           const d = drag.current;
-          if (!d) return;
+          if (!d || simple) return;
           const dx = e.clientX - d.x,
             dy = e.clientY - d.y;
           if (Math.abs(dx) + Math.abs(dy) > 4) {

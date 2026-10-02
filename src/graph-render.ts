@@ -1,4 +1,15 @@
-import type { Project } from "./model";
+import type { Project, Track } from "./model";
+import { isTrackActive } from "./model";
+import type { MusicEvent } from "./music";
+export function simpleColor(track: Track) {
+  return `#${[1, 3, 5]
+    .map((i) =>
+      Math.round(parseInt(track.color.slice(i, i + 2), 16) * 0.58)
+        .toString(16)
+        .padStart(2, "0"),
+    )
+    .join("")}`;
+}
 export interface Curve {
   id: string;
   values: Float32Array;
@@ -32,6 +43,8 @@ export function drawGraph(
   playing: boolean,
   selectedId = "",
   simple = false,
+  events: MusicEvent[] = [],
+  sounding: MusicEvent[] = [],
 ) {
   const theme = simple
       ? { bg: "#ffffff", grid: "#ffffff", axis: "#111111", text: "#111111" }
@@ -118,11 +131,25 @@ export function drawGraph(
   if (!simple) ctx.fillText("x / beats", width - pad.right, 16);
   ctx.textAlign = "left";
   if (!simple) ctx.fillText("f(x)", pad.left, 16);
+  if (simple) {
+    ctx.font = '10px "Courier New", monospace';
+    ctx.fillStyle = "#737373";
+    const step = Math.max(1, 2 ** Math.ceil(Math.log2(view.span / 8)));
+    ctx.textAlign = "center";
+    for (
+      let x = Math.ceil(view.start / step) * step;
+      x <= view.start + view.span;
+      x += step
+    ) {
+      ctx.fillText(String(x), px(x), height - 15);
+    }
+    ctx.textAlign = "left";
+  }
   ctx.save();
   ctx.beginPath();
   ctx.rect(pad.left, pad.top, w, h);
   ctx.clip();
-  let drawn = simple ? curves.filter((c) => c.id === selectedId) : curves;
+  let drawn = curves;
   if (!simple && project.visuals.combined && curves.length) {
     const values = new Float32Array(curves[0].values.length);
     for (let i = 0; i < values.length; i++) {
@@ -135,17 +162,16 @@ export function drawGraph(
   }
   for (const curve of drawn) {
     const track = project.tracks.find((t) => t.id === curve.id);
-    if (!simple && track && !track.enabled) continue;
-    const section = project.sections.find(
-      (s) => beat >= s.startBeat && beat < s.endBeat,
-    );
+    if (track && !track.enabled) continue;
     const active =
-      simple ||
       !track ||
-      (!track.muted && (!section || section.activeTrackIds.includes(track.id)));
+      (isTrackActive(project, track, beat) &&
+        (!simple || (track.volume > 0 && project.master > 0)));
     const rawColor = track?.color ?? "#f0e7ff";
     const color = simple
-      ? "#111111"
+      ? track
+        ? simpleColor(track)
+        : "#111111"
       : project.visuals.theme === "mono"
         ? "#282832"
         : project.visuals.theme === "light"
@@ -161,7 +187,17 @@ export function drawGraph(
     ctx.lineWidth = simple
       ? 1.8
       : project.visuals.lineWidth + (track?.id === selectedId ? 0.4 : 0);
-    ctx.globalAlpha = simple ? 1 : active ? (playing ? 0.4 : 0.85) : 0.18;
+    ctx.globalAlpha = simple
+      ? active
+        ? track?.id === selectedId
+          ? 0.9
+          : 0.55
+        : 0.15
+      : active
+        ? playing
+          ? 0.4
+          : 0.85
+        : 0.18;
     if (!simple && (project.visuals.glow || project.visuals.theme === "neon")) {
       ctx.shadowColor = color;
       ctx.shadowBlur = 8;
@@ -219,7 +255,9 @@ export function drawGraph(
       ctx.restore();
     }
     if (
-      (playing || simple) &&
+      playing &&
+      !simple &&
+      active &&
       beat >= view.start &&
       beat <= view.start + view.span
     ) {
@@ -235,9 +273,37 @@ export function drawGraph(
         ctx.fill();
       }
     }
+    if (simple && track) {
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = color;
+      // These circles use the same eventAt results as the audio scheduler.
+      for (const event of events.filter(
+        (e) => e.trackId === track.id && e.velocity > 0,
+      )) {
+        if (!Number.isFinite(event.value) || track.volume === 0) continue;
+        ctx.globalAlpha = active ? 0.8 : 0.15;
+        ctx.beginPath();
+        ctx.arc(px(event.beat), py(event.value!), 3, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      // Only voices that have actually reached their scheduled audio time light up.
+      for (const event of sounding.filter((e) => e.trackId === track.id)) {
+        if (!Number.isFinite(event.value)) continue;
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(px(event.beat), py(event.value!), 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
   }
   ctx.globalAlpha = 1;
-  if (!simple && beat >= view.start && beat <= view.start + view.span) {
+  if (
+    (playing || !simple) &&
+    beat >= view.start &&
+    beat <= view.start + view.span
+  ) {
     ctx.strokeStyle = theme.text;
     ctx.globalAlpha = 0.6;
     ctx.setLineDash([3, 5]);
