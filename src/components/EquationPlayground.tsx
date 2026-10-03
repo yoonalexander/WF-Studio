@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Play, Pause, ArrowUpRight, Dices, Sun, Moon } from "lucide-react";
+import { Play, Pause, ArrowUpRight, Dices } from "lucide-react";
 import katex from "katex";
 import { useStudio } from "../store";
 import { newSimpleSong } from "../simple";
@@ -14,9 +14,10 @@ import { SoundPicker } from "./SoundPicker";
 import { VolumeControl } from "./VolumeControl";
 import { soundKey, soundPreset } from "../sounds";
 import type { SoundId } from "../sounds";
+import { useAppearance } from "../appearance";
+import { ThemeSwitch } from "./ThemeSwitch";
 
 const draftKey = "wf-one-equation";
-const themeKey = "wf-equation-theme";
 export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
   const { project, load, track: update } = useStudio();
   const [ready, setReady] = useState(false),
@@ -30,13 +31,7 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
       return "electro";
     }
   });
-  const [theme, setTheme] = useState<"light" | "dark">(() => {
-    try {
-      return localStorage.getItem(themeKey) === "dark" ? "dark" : "light";
-    } catch {
-      return "light";
-    }
-  });
+  const [theme, setTheme] = useAppearance();
   const [editing, setEditing] = useState(false),
     [message, setMessage] = useState("");
   useEffect(() => {
@@ -309,26 +304,7 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
         <a href="https://alexyoon.com">
           alexyoon.com <ArrowUpRight size={12} />
         </a>
-        <div className="equation-theme" role="group" aria-label="Color theme">
-          {(["light", "dark"] as const).map((choice) => (
-            <button
-              key={choice}
-              aria-label={`${choice === "light" ? "Light" : "Dark"} mode`}
-              aria-pressed={theme === choice}
-              title={`${choice === "light" ? "Light" : "Dark"} mode`}
-              onClick={() => {
-                setTheme(choice);
-                try {
-                  localStorage.setItem(themeKey, choice);
-                } catch {
-                  /* Storage is optional. */
-                }
-              }}
-            >
-              {choice === "light" ? <Sun size={16} /> : <Moon size={16} />}
-            </button>
-          ))}
-        </div>
+        <ThemeSwitch appearance={theme} onChange={setTheme} />
       </footer>
     </div>
   );

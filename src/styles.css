@@ -183,7 +183,7 @@ code {
 }
 .primary {
   background: var(--accent);
-  color: #142a29;
+  color: var(--primary-text, #142a29);
 }
 .secondary {
   border: 1px solid var(--line);
@@ -2817,5 +2817,344 @@ body:has(.simple-app) {
   .top-actions .view-switch {
     width: auto;
     padding: 7px;
+  }
+}
+
+/* Studio chrome uses the same monochrome palette as the one-equation page. */
+.studio-app[data-theme="light"] {
+  --bg: #ffffff;
+  --panel: #ffffff;
+  --canvas: #ffffff;
+  --text: #111111;
+  --muted: #6b6b6b;
+  --faint: #808080;
+  --line: #e3e3e3;
+  --accent: #111111;
+  --primary-text: #ffffff;
+  --field: #f8f8f8;
+  --hover: #f1f1f1;
+  --error: #b42336;
+  color-scheme: light;
+}
+.studio-app[data-theme="dark"] {
+  --bg: #151515;
+  --panel: #1b1b1b;
+  --canvas: #151515;
+  --text: #eeeeee;
+  --muted: #a3a3a3;
+  --faint: #929292;
+  --line: #3b3b3b;
+  --accent: #eeeeee;
+  --primary-text: #151515;
+  --field: #202020;
+  --hover: #252525;
+  --error: #ff9393;
+  color-scheme: dark;
+}
+body:has(.studio-app[data-theme="light"]) {
+  background: #ffffff;
+  color-scheme: light;
+}
+body:has(.studio-app[data-theme="dark"]) {
+  background: #151515;
+  color-scheme: dark;
+}
+.studio-app.simple-app {
+  --field: var(--bg);
+  --panel: var(--bg);
+}
+.studio-app .play-button {
+  color: var(--primary-text);
+}
+.studio-app .modal {
+  border-color: var(--line);
+  box-shadow: 0 20px 80px #0003;
+}
+.studio-app .modal::backdrop {
+  background: #0007;
+}
+.studio-app :is(.danger, .inline-error, .simple-error, .error-indicator) {
+  color: var(--error);
+}
+.studio-app .brand-mark {
+  border: 1px solid var(--line);
+  background: transparent;
+  border-radius: 8px;
+}
+.studio-app .topbar {
+  gap: 24px;
+  min-height: 78px;
+  padding: 18px 28px;
+}
+.studio-app .brand {
+  font-size: 16px;
+  font-weight: 500;
+}
+.studio-app .top-actions {
+  gap: 6px;
+}
+.studio-app .view-switch {
+  margin-left: 10px;
+  gap: 6px;
+}
+.studio-app .welcome h1 {
+  font-size: 34px;
+}
+.studio-app .welcome {
+  padding: 24px 32px;
+}
+.studio-app .example-art {
+  color: var(--text);
+  background: var(--hover);
+}
+.studio-theme-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 28px 12px;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+.studio-theme-footer a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+}
+.detailed-app {
+  padding-bottom: 52px;
+}
+.detailed-app .studio-theme-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  background: var(--bg);
+  border-top: 1px solid var(--line);
+}
+.studio-app .simple-graph {
+  background: var(--bg);
+}
+.studio-app
+  :is(
+    .simple-song-name,
+    .simple-navigation,
+    .simple-transport,
+    .simple-graph-key,
+    .simple-sound-select small,
+    .simple-editor-heading > span,
+    .simple-sound-settings label,
+    .simple-bottom
+  ) {
+  color: var(--muted);
+}
+.studio-app .simple-tempo input {
+  color: var(--text);
+}
+.studio-app :is(.simple-detail-switch:hover, .simple-add) {
+  color: var(--text);
+}
+.studio-app :is(.simple-song-name:focus, .simple-tempo input:focus) {
+  outline-color: var(--text);
+}
+.studio-app
+  :is(
+    .simple-sound,
+    .simple-editor-heading input,
+    .simple-sound-settings select,
+    .simple-sound-settings input[type="number"],
+    .simple-input
+  ) {
+  border-color: var(--line);
+}
+.studio-app .simple-sound.selected {
+  border-color: var(--sound);
+}
+.studio-app .simple-arrangement-notice,
+.studio-app .simple-sound button[aria-pressed="true"] {
+  background: var(--hover);
+}
+.studio-app .simple-input:focus-within {
+  border-color: var(--text);
+  box-shadow: 0 1px 0 var(--text);
+}
+.studio-app .simple-input.invalid {
+  border-color: var(--error);
+}
+.studio-app .simple-input .cm-content span {
+  color: var(--text) !important;
+}
+.studio-app .simple-input .cm-tooltip {
+  background: var(--panel) !important;
+  color: var(--text) !important;
+  border-color: var(--line) !important;
+}
+.studio-app .simple-input .cm-tooltip-autocomplete ul li[aria-selected] {
+  background: var(--hover) !important;
+  color: var(--text) !important;
+}
+.studio-app .cm-cursor {
+  border-left-color: var(--text);
+}
+.library-tabs {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 12px;
+}
+.library-tabs button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 0;
+  color: var(--muted);
+  font-size: 12px;
+  border-bottom: 2px solid transparent;
+}
+.library-tabs button[aria-pressed="true"] {
+  color: var(--text);
+  border-color: var(--text);
+}
+.library-hint,
+.library-empty {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 12px 0;
+}
+.project-row {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding-right: 10px;
+}
+.project-row:hover {
+  background: var(--hover);
+}
+.project-open {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 14px;
+  text-align: left;
+  flex: 1;
+  min-width: 0;
+}
+.project-open > span:first-of-type {
+  flex: 1;
+  min-width: 0;
+}
+.project-open:disabled {
+  opacity: 1;
+}
+.project-delete:hover {
+  color: var(--error);
+}
+
+@media (min-width: 900px) and (min-height: 700px) {
+  .studio-app.simple-app {
+    height: 100dvh;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .studio-app .simple-header {
+    padding: 16px 28px;
+    flex-shrink: 0;
+  }
+  .studio-app .simple-studio {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    padding: 0 28px;
+  }
+  .studio-app .simple-studio > :not(.simple-graph) {
+    flex-shrink: 0;
+  }
+  .studio-app .simple-graph {
+    flex: 1;
+    height: auto;
+    min-height: 140px;
+  }
+  .studio-app .simple-graph-key {
+    margin: 0 0 10px;
+  }
+  .studio-app .simple-sounds {
+    width: 100%;
+    margin-bottom: 6px;
+  }
+  .studio-app .simple-sound-list {
+    max-height: 114px;
+    overflow: auto;
+  }
+  .studio-app .simple-add-sound {
+    margin-top: 4px;
+  }
+  .studio-app .simple-equation {
+    width: 100%;
+    padding-top: 4px;
+    max-height: 270px;
+    overflow: auto;
+  }
+  .studio-app .simple-editor-heading {
+    margin-bottom: 4px;
+  }
+  .studio-app .simple-notation {
+    min-height: 40px;
+    max-height: 64px;
+    padding-bottom: 6px;
+  }
+  .studio-app .simple-input .cm-scroller {
+    max-height: 72px;
+  }
+  .studio-app .simple-sound-settings {
+    margin: 10px 0 6px;
+    flex-wrap: nowrap;
+    gap: 24px;
+  }
+  .studio-app .simple-bottom {
+    padding: 6px 0;
+  }
+  .studio-app .simple-hint {
+    line-height: 1.5;
+  }
+  .studio-app .studio-theme-footer {
+    padding-top: 4px;
+    padding-bottom: 6px;
+  }
+}
+@media (max-width: 980px) {
+  .studio-app .topbar {
+    gap: 14px;
+    padding: 16px;
+  }
+  .studio-app .top-actions {
+    flex-wrap: wrap;
+  }
+  .studio-app .view-switch {
+    margin-left: 0;
+  }
+}
+@media (max-width: 650px) {
+  .studio-app .studio-theme-footer {
+    padding: 8px 22px 16px;
+  }
+  .studio-app .simple-navigation {
+    gap: 8px 14px;
+  }
+  .studio-app .topbar {
+    flex-wrap: wrap;
+  }
+  .studio-app .brand {
+    font-size: 14px;
+  }
+  .studio-app .project-title {
+    padding-left: 14px;
   }
 }

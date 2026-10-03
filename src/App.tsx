@@ -22,6 +22,9 @@ import {
   ChevronRight,
   AudioLines,
   Keyboard,
+  ArrowUpRight,
+  Trash2,
+  ArchiveRestore,
 } from "lucide-react";
 import { useStudio } from "./store";
 import { audio } from "./audio";
@@ -39,6 +42,9 @@ import {
   loadActive,
   fromShare,
   listProjects,
+  listTrash,
+  trashProject,
+  restoreProject,
   parseProjectFile,
   saveProject,
   db,
@@ -50,6 +56,8 @@ import { Modal } from "./components/Modal";
 import { ExportDialog } from "./components/ExportDialog";
 import { SimpleStudio } from "./components/SimpleStudio";
 import { EquationPlayground } from "./components/EquationPlayground";
+import { ThemeSwitch } from "./components/ThemeSwitch";
+import { useAppearance } from "./appearance";
 
 export default function App() {
   const [studio, setStudio] = useState(
@@ -80,6 +88,7 @@ export default function App() {
 }
 
 function SongStudio({ onHome }: { onHome: () => void }) {
+  const [appearance, setAppearance] = useAppearance();
   const {
     project,
     selectedId,
@@ -112,6 +121,9 @@ function SongStudio({ onHome }: { onHome: () => void }) {
     [status, setStatus] = useState("Loading local project…"),
     [toast, setToast] = useState(""),
     [saved, setSaved] = useState<Project[]>([]),
+    [trashed, setTrashed] = useState<Project[]>([]),
+    [showTrash, setShowTrash] = useState(false),
+    [libraryBusy, setLibraryBusy] = useState(false),
     [addType, setAddType] = useState<Track["instrument"]>("synth");
   const notify = useCallback((s: string) => setToast(s), []),
     file = useRef<HTMLInputElement>(null),
@@ -266,11 +278,47 @@ function SongStudio({ onHome }: { onHome: () => void }) {
   const openLibrary = async () => {
     try {
       setSaved(await listProjects());
+      setTrashed(await listTrash());
+      setShowTrash(false);
       setModal("library");
     } catch {
       notify(
         "Local project library is unavailable. Use a project file to save.",
       );
+    }
+  };
+  const manageProject = async (id: string, restore = false) => {
+    setLibraryBusy(true);
+    try {
+      if (restore) await restoreProject(id);
+      else {
+        if (id === useStudio.getState().project.id) {
+          pause();
+          await saveProject(useStudio.getState().project);
+          const replacement =
+            viewMode === "simple" ? newSimpleSong() : newProject();
+          load(replacement);
+          audio.stop();
+          seek(0);
+          await saveProject(replacement);
+        }
+        await trashProject(id);
+      }
+      setSaved(await listProjects());
+      setTrashed(await listTrash());
+      notify(
+        restore
+          ? "Project restored."
+          : "Project moved to Trash. You can restore it in Projects.",
+      );
+    } catch {
+      notify(
+        restore
+          ? "Could not restore this project."
+          : "Could not delete this project. Your saved copy is still available.",
+      );
+    } finally {
+      setLibraryBusy(false);
     }
   };
   const switchProject = async (p: Project) => {
@@ -324,11 +372,12 @@ function SongStudio({ onHome }: { onHome: () => void }) {
   };
   return (
     <div
-      className={`app ${viewMode === "simple" ? "simple-app" : ""}`}
-      data-theme={viewMode === "simple" ? "simple" : project.visuals.theme}
+      className={`app studio-app ${viewMode === "simple" ? "simple-app" : "detailed-app"}`}
+      data-theme={appearance}
     >
       {viewMode === "simple" ? (
         <SimpleStudio
+          appearance={appearance}
           engine={engine}
           playing={playing}
           ready={ready}
@@ -363,7 +412,7 @@ function SongStudio({ onHome }: { onHome: () => void }) {
                 <Activity size={25} />
               </span>
               <span>
-                Wave Function<small>SONG STUDIO · DETAILED</small>
+                Detailed Studio<small>WAVE FUNCTION</small>
               </span>
             </a>
             <div className="project-title">
@@ -384,13 +433,7 @@ function SongStudio({ onHome }: { onHome: () => void }) {
             </div>
             <nav className="top-actions">
               <button className="text-button" onClick={() => void goHome()}>
-                One equation
-              </button>
-              <button
-                className="text-button view-switch"
-                onClick={() => switchView("simple")}
-              >
-                Simple view
+                Home Page
               </button>
               <button
                 className="text-button"
@@ -418,6 +461,12 @@ function SongStudio({ onHome }: { onHome: () => void }) {
               <button className="primary" onClick={() => setModal("export")}>
                 <Download size={16} />
                 <span>Export</span>
+              </button>
+              <button
+                className="text-button view-switch"
+                onClick={() => switchView("simple")}
+              >
+                Simple view <ArrowUpRight size={15} />
               </button>
             </nav>
           </header>
@@ -741,7 +790,12 @@ function SongStudio({ onHome }: { onHome: () => void }) {
               </div>
             </aside>
             <div className="graph-area">
-              <Graph playing={playing} onSeek={seek} onError={notify} />
+              <Graph
+                appearance={appearance}
+                playing={playing}
+                onSeek={seek}
+                onError={notify}
+              />
               <div className="value-strip">
                 <span className="live-dot" />
                 <span>{playing ? "PLAYING" : "READY TO PLAY"}</span>
@@ -769,6 +823,12 @@ function SongStudio({ onHome }: { onHome: () => void }) {
           </footer>
         </>
       )}
+      <footer className="studio-theme-footer">
+        <a href="https://alexyoon.com">
+          alexyoon.com <ArrowUpRight size={12} />
+        </a>
+        <ThemeSwitch appearance={appearance} onChange={setAppearance} />
+      </footer>
       <input
         type="file"
         accept=".json,.wf.json"
@@ -834,17 +894,27 @@ function SongStudio({ onHome }: { onHome: () => void }) {
           <div className="library-actions">
             <button
               className="primary"
-              onClick={() => void switchProject(newProject())}
+              disabled={libraryBusy}
+              onClick={() =>
+                void switchProject(
+                  viewMode === "simple" ? newSimpleSong() : newProject(),
+                )
+              }
             >
               <Plus size={16} />
               New project
             </button>
-            <button className="secondary" onClick={() => file.current?.click()}>
+            <button
+              className="secondary"
+              disabled={libraryBusy}
+              onClick={() => file.current?.click()}
+            >
               <Upload size={16} />
               Import project
             </button>
             <button
               className="secondary"
+              disabled={libraryBusy}
               onClick={() =>
                 void saveProject(project)
                   .then(() => listProjects())
@@ -857,39 +927,84 @@ function SongStudio({ onHome }: { onHome: () => void }) {
               Save now
             </button>
           </div>
+          <div
+            className="library-tabs"
+            role="group"
+            aria-label="Project library"
+          >
+            <button
+              aria-pressed={!showTrash}
+              onClick={() => setShowTrash(false)}
+            >
+              Saved projects ({saved.length})
+            </button>
+            <button aria-pressed={showTrash} onClick={() => setShowTrash(true)}>
+              <Trash2 size={14} /> Trash ({trashed.length})
+            </button>
+          </div>
+          <p className="library-hint">
+            {showTrash
+              ? "Deleted projects stay here until you restore them."
+              : "Delete moves a project to Trash. Individual sounds can be removed in the editor."}
+          </p>
           <div className="project-list">
-            {saved.map((p) => (
-              <button
-                key={p.id}
-                onClick={() =>
-                  void db.projects
-                    .get(p.id)
-                    .then((data) => {
-                      if (data) return switchProject(validateProject(data));
-                    })
-                    .catch(() => notify("Could not open this saved project."))
-                }
-              >
-                <FolderOpen size={19} />
-                <span>
-                  <strong>{p.name}</strong>
-                  <small>
-                    {p.tracks.length} tracks · {p.bpm} BPM ·{" "}
-                    {new Date(p.updatedAt).toLocaleDateString()}
-                  </small>
-                </span>
-                {p.id === project.id ? (
-                  <span className="pill">OPEN</span>
-                ) : (
-                  <ChevronRight size={16} />
-                )}
-              </button>
+            {(showTrash ? trashed : saved).map((p) => (
+              <div className="project-row" key={p.id}>
+                <button
+                  className="project-open"
+                  disabled={libraryBusy || showTrash}
+                  onClick={() =>
+                    void db.projects
+                      .get(p.id)
+                      .then((data) => {
+                        if (data) return switchProject(validateProject(data));
+                      })
+                      .catch(() => notify("Could not open this saved project."))
+                  }
+                >
+                  <FolderOpen size={19} />
+                  <span>
+                    <strong>{p.name}</strong>
+                    <small>
+                      {p.tracks.length} tracks · {p.bpm} BPM ·{" "}
+                      {new Date(p.updatedAt).toLocaleString(undefined, {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}
+                    </small>
+                  </span>
+                  {p.id === project.id ? (
+                    <span className="pill">OPEN</span>
+                  ) : (
+                    <ChevronRight size={16} />
+                  )}
+                </button>
+                <button
+                  className={`${showTrash ? "project-restore" : "project-delete"} icon-button`}
+                  disabled={libraryBusy}
+                  aria-label={`${showTrash ? "Restore" : "Delete"} project ${p.name}`}
+                  title={showTrash ? "Restore project" : "Move to Trash"}
+                  onClick={() => void manageProject(p.id, showTrash)}
+                >
+                  {showTrash ? (
+                    <ArchiveRestore size={17} />
+                  ) : (
+                    <Trash2 size={17} />
+                  )}
+                </button>
+              </div>
             ))}
+            {(showTrash ? trashed : saved).length === 0 && (
+              <p className="library-empty">
+                {showTrash ? "Trash is empty." : "No saved projects yet."}
+              </p>
+            )}
           </div>
         </Modal>
       )}
       {modal === "export" && (
         <ExportDialog
+          appearance={appearance}
           playbackMode={viewMode === "simple" ? "continuous" : "sequenced"}
           close={() => setModal(null)}
           notify={notify}
@@ -905,20 +1020,14 @@ function SongStudio({ onHome }: { onHome: () => void }) {
             <Field label="Graph theme">
               <select
                 aria-label="Graph theme"
-                value={project.visuals.theme}
+                value={appearance}
                 onChange={(e) =>
-                  change((p) => {
-                    p.visuals.theme = e.target
-                      .value as Project["visuals"]["theme"];
-                  })
+                  setAppearance(e.target.value as "light" | "dark")
                 }
               >
                 {[
                   { v: "dark", n: "Dark graph" },
                   { v: "light", n: "Clean white" },
-                  { v: "neon", n: "Neon purple" },
-                  { v: "blueprint", n: "Blueprint" },
-                  { v: "mono", n: "Monochrome" },
                 ].map((t) => (
                   <option key={t.v} value={t.v}>
                     {t.n}

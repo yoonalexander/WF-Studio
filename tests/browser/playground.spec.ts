@@ -319,7 +319,7 @@ test("one equation is the default, with song studio isolated and saved songs pre
   await page.getByLabel("New sound instrument").selectOption("kick");
   await page.getByRole("button", { name: "Add sound", exact: true }).click();
   await expect(page.locator(".simple-sound")).toHaveCount(2);
-  await page.getByRole("button", { name: "One equation", exact: true }).click();
+  await page.getByRole("button", { name: "Home Page", exact: true }).click();
   await expect(page.getByLabel("Rendered equation")).toContainText("7");
   await page.reload();
   await expect(page.locator(".equation-page")).toBeVisible();

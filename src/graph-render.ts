@@ -47,15 +47,32 @@ export function drawGraph(
   events: MusicEvent[] = [],
   sounding: MusicEvent[] = [],
   minimal = false,
-  appearance: "light" | "dark" = "light",
+  appearance?: "light" | "dark",
   continuous = false,
 ) {
   const theme =
-      minimal && appearance === "dark"
-        ? { bg: "#151515", grid: "#151515", axis: "#eeeeee", text: "#eeeeee" }
-        : simple
-          ? { bg: "#ffffff", grid: "#ffffff", axis: "#111111", text: "#111111" }
-          : graphThemes[project.visuals.theme],
+      appearance === "dark"
+        ? {
+            bg: "#151515",
+            grid: simple ? "#151515" : "#292929",
+            axis: "#eeeeee",
+            text: "#eeeeee",
+          }
+        : appearance === "light"
+          ? {
+              bg: "#ffffff",
+              grid: simple ? "#ffffff" : "#ededed",
+              axis: simple ? "#111111" : "#9b9b9b",
+              text: "#111111",
+            }
+          : simple
+            ? {
+                bg: "#ffffff",
+                grid: "#ffffff",
+                axis: "#111111",
+                text: "#111111",
+              }
+            : graphThemes[project.visuals.theme],
     pad = { left: 50, right: 24, top: 30, bottom: 40 },
     w = width - pad.left - pad.right,
     h = height - pad.top - pad.bottom;
@@ -185,20 +202,26 @@ export function drawGraph(
     const color = minimal
       ? theme.text
       : simple
-        ? track
-          ? simpleColor(track)
-          : "#111111"
-        : project.visuals.theme === "mono"
-          ? "#282832"
-          : project.visuals.theme === "light"
-            ? `#${[1, 3, 5]
-                .map((i) =>
-                  Math.round(parseInt(rawColor.slice(i, i + 2), 16) * 0.58)
-                    .toString(16)
-                    .padStart(2, "0"),
-                )
-                .join("")}`
-            : rawColor;
+        ? appearance === "dark"
+          ? rawColor
+          : track
+            ? simpleColor(track)
+            : "#111111"
+        : appearance === "dark"
+          ? rawColor
+          : appearance === "light" && track
+            ? simpleColor(track)
+            : project.visuals.theme === "mono"
+              ? "#282832"
+              : project.visuals.theme === "light"
+                ? `#${[1, 3, 5]
+                    .map((i) =>
+                      Math.round(parseInt(rawColor.slice(i, i + 2), 16) * 0.58)
+                        .toString(16)
+                        .padStart(2, "0"),
+                    )
+                    .join("")}`
+                : rawColor;
     ctx.strokeStyle = color;
     ctx.lineWidth = simple
       ? 1.8

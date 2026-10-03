@@ -58,7 +58,9 @@ Use semicolons or newlines between cases. Chained bounds (`0 <= x < 2`), `and`/`
 6. Click arrangement sections to choose their active tracks. Gaps between sections play all enabled tracks.
 7. Export the loop or whole song as WAV, MIDI, video, or a portable project file. Simple WAV/video preserve continuous sound; MIDI converts curves to discrete notes. Remix links embed a compressed project in the URL fragment and create a new local copy when opened.
 
-Local projects autosave to IndexedDB in this browser on this origin. **Project JSON files are the portable backup.** Clearing site data removes local projects. Local development and the deployed site have separate libraries.
+Simple Studio keeps Tone alongside the other sound controls and fits its graph and editor into a desktop frame. Larger libraries of sound layers and long equations use bounded panels; mobile and very short windows retain accessible scrolling. Both studio views use the homepage's black/white light and dark modes, defaulting to light and remembering your choice across pages. Detailed Studio keeps its arrangement workspace and puts the Simple view switch at the far right.
+
+Local projects autosave to IndexedDB in this browser on this origin. Projects offers **Delete** for each saved song; deleted songs go to **Trash** and can be restored there. Deleting the open song creates a fresh working song, and delayed autosaves cannot recreate the deleted entry. Existing saved projects survive the storage upgrade. **Project JSON files are the portable backup.** Clearing site data removes local projects, including Trash. Local development and the deployed site have separate libraries.
 
 ## Implemented
 
@@ -67,7 +69,7 @@ Local projects autosave to IndexedDB in this browser on this origin. **Project J
 - Continuous pitch, amplitude, filter and pan controls in Simple; equation-driven trigger/gate events. Detailed adds five scale locks, note intervals and lengths. Visual-only mappings and root notes are available in both.
 - Synth/bass with sine, triangle, saw and square oscillators; ADSR, cutoff, detune, pan and volume. Synthesized kick, snare, closed/open hat and clap. Master compressor and delay.
 - Audio-clock transport with look-ahead scheduling; play/pause/stop/restart, tempo, metronome and loop range. Visuals follow audio and cannot change its timing.
-- Worker-sampled high-DPI Canvas graphs, pan, zoom, reset, fullscreen, moving points, combined curve, follow mode, glow and five themes.
+- Worker-sampled high-DPI Canvas graphs, pan, zoom, reset, fullscreen, moving points, combined curve, follow mode, glow and shared light/dark appearance.
 - Sections and per-section activation, three example songs, local project library, autosave, JSON import/export and grouped undo/redo.
 - Stereo PCM WAV through OfflineAudioContext, standard MIDI with tempo and GM drum notes, and 1080p / portrait / square real-time graph video with audio through MediaRecorder.
 - Responsive mobile editing, semantic controls, keyboard focus, reduced-motion rendering and keyboard shortcuts.

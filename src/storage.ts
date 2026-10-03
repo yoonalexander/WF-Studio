@@ -4,9 +4,14 @@ import { validateProject } from "./model";
 import type { Project } from "./model";
 class StudioDB extends Dexie {
   projects!: Table<Project, string>;
+  trash!: Table<Project, string>;
   constructor() {
     super("wave-function-studio");
     this.version(1).stores({ projects: "id,updatedAt,name" });
+    this.version(2).stores({
+      projects: "id,updatedAt,name",
+      trash: "id,updatedAt,name",
+    });
   }
 }
 export const db = new StudioDB();
@@ -16,6 +21,8 @@ export function saveProject(project: Project) {
   const saved = saveQueue
     .catch(() => {})
     .then(async () => {
+      // A delayed autosave must not put a deleted song back in the library.
+      if (await db.trash.get(snapshot.id)) return;
       await db.projects.put(snapshot);
       localStorage.setItem("wf-active", snapshot.id);
     });
@@ -29,7 +36,42 @@ export async function loadActive() {
   return data ? validateProject(data) : undefined;
 }
 export async function listProjects() {
+  await saveQueue.catch(() => {});
   return db.projects.orderBy("updatedAt").reverse().toArray();
+}
+export async function listTrash() {
+  await saveQueue.catch(() => {});
+  return db.trash.orderBy("updatedAt").reverse().toArray();
+}
+export function trashProject(id: string) {
+  const pending = saveQueue
+    .catch(() => {})
+    .then(async () => {
+      await db.transaction("rw", db.projects, db.trash, async () => {
+        const project = await db.projects.get(id);
+        if (!project) throw new Error("Project was not found.");
+        await db.trash.put(project);
+        await db.projects.delete(id);
+      });
+      if (localStorage.getItem("wf-active") === id)
+        localStorage.removeItem("wf-active");
+    });
+  saveQueue = pending;
+  return pending;
+}
+export function restoreProject(id: string) {
+  const pending = saveQueue
+    .catch(() => {})
+    .then(() =>
+      db.transaction("rw", db.projects, db.trash, async () => {
+        const project = await db.trash.get(id);
+        if (!project) throw new Error("Project was not found in Trash.");
+        await db.projects.put(validateProject(project));
+        await db.trash.delete(id);
+      }),
+    );
+  saveQueue = pending;
+  return pending;
 }
 export function parseProjectFile(text: string) {
   if (text.length > 1_000_000)

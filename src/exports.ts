@@ -210,6 +210,14 @@ export async function exportVideo(
       yCenter: 2,
       ySpan: 12,
     };
+  const appearance =
+    mode === "continuous"
+      ? project.visuals.theme === "dark"
+        ? "dark"
+        : "light"
+      : project.visuals.theme === "dark" || project.visuals.theme === "light"
+        ? project.visuals.theme
+        : undefined;
   const hits =
     mode === "continuous"
       ? collectEvents(
@@ -294,13 +302,11 @@ export async function exportVideo(
       [],
       sounding,
       false,
-      "light",
+      appearance,
       mode === "continuous",
     );
     ctx.fillStyle =
-      mode === "continuous" ||
-      project.visuals.theme === "light" ||
-      project.visuals.theme === "mono"
+      appearance === "light" || project.visuals.theme === "mono"
         ? "#222831"
         : "#f0f3f6";
     ctx.font = "bold 28px sans-serif";

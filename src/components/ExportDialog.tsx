@@ -13,16 +13,19 @@ import {
   exportVideo,
 } from "../exports";
 import { shareUrl } from "../storage";
+import type { Appearance } from "../appearance";
 export function ExportDialog({
   close,
   notify,
   pause,
   playbackMode = "sequenced",
+  appearance,
 }: {
   close: () => void;
   notify: (s: string) => void;
   pause: () => void;
   playbackMode?: PlaybackMode;
+  appearance?: Appearance;
 }) {
   const project = useStudio((s) => s.project),
     [format, setFormat] = useState("wav"),
@@ -58,6 +61,7 @@ export function ExportDialog({
           `${base}.wav`,
         );
       else if (format === "video") {
+        if (appearance) snapshot.visuals.theme = appearance;
         abort.current = new AbortController();
         const result = await exportVideo(
           snapshot,

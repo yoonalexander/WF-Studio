@@ -22,6 +22,7 @@ import { soundState, noteName } from "../simple";
 import { simpleColor } from "../graph-render";
 import { Graph } from "./Graph";
 import { EquationEditor } from "./EquationEditor";
+import type { Appearance } from "../appearance";
 
 const instruments = [
   ["synth", "Melody"],
@@ -34,6 +35,7 @@ const instruments = [
 ] as const;
 
 export function SimpleStudio({
+  appearance,
   engine,
   playing,
   ready,
@@ -51,6 +53,7 @@ export function SimpleStudio({
   onProjects,
   onExport,
 }: {
+  appearance: Appearance;
   engine: MathEngine;
   playing: boolean;
   ready: boolean;
@@ -119,9 +122,7 @@ export function SimpleStudio({
   return (
     <>
       <header className="simple-header">
-        <span className="simple-wordmark">
-          Song studio <small>Simple</small>
-        </span>
+        <span className="simple-wordmark">Simple Studio</span>
         <input
           className="simple-song-name"
           aria-label="Project name"
@@ -134,7 +135,7 @@ export function SimpleStudio({
           }
         />
         <nav className="simple-navigation" aria-label="Song actions">
-          <button onClick={onHome}>One equation</button>
+          <button onClick={onHome}>Home Page</button>
           <button onClick={onNew}>New song</button>
           <button onClick={onExamples}>Examples</button>
           <button onClick={onProjects}>Projects</button>
@@ -279,6 +280,7 @@ export function SimpleStudio({
         <Graph
           simple
           continuous
+          appearance={appearance}
           playing={playing}
           onSeek={onSeek}
           onError={onError}
@@ -303,7 +305,12 @@ export function SimpleStudio({
                 <div
                   key={t.id}
                   className={`simple-sound ${t.id === selectedId ? "selected" : ""}`}
-                  style={{ "--sound": simpleColor(t) } as React.CSSProperties}
+                  style={
+                    {
+                      "--sound":
+                        appearance === "dark" ? t.color : simpleColor(t),
+                    } as React.CSSProperties
+                  }
                   data-sound-state={state}
                 >
                   <button
@@ -537,47 +544,49 @@ export function SimpleStudio({
                     onChange={(e) => patch({ volume: Number(e.target.value) })}
                   />
                 </label>
-              </div>
-              {!percussion && (
-                <div className="simple-sound-settings simple-melody-settings">
-                  {trigger && (
+                {!percussion && (
+                  <>
+                    {trigger && (
+                      <label>
+                        Note length{" "}
+                        <input
+                          aria-label="Note length"
+                          type="number"
+                          min={0.05}
+                          max={4}
+                          step={0.05}
+                          value={track.noteLength}
+                          onChange={(e) =>
+                            patch({
+                              noteLength: Math.max(
+                                0.05,
+                                Math.min(4, Number(e.target.value) || 0.05),
+                              ),
+                            })
+                          }
+                        />
+                      </label>
+                    )}
                     <label>
-                      Note length{" "}
-                      <input
-                        aria-label="Note length"
-                        type="number"
-                        min={0.05}
-                        max={4}
-                        step={0.05}
-                        value={track.noteLength}
+                      Tone{" "}
+                      <select
+                        aria-label="Tone"
+                        value={track.waveform}
                         onChange={(e) =>
                           patch({
-                            noteLength: Math.max(
-                              0.05,
-                              Math.min(4, Number(e.target.value) || 0.05),
-                            ),
+                            waveform: e.target.value as Track["waveform"],
                           })
                         }
-                      />
+                      >
+                        <option value="sine">Sine</option>
+                        <option value="triangle">Triangle</option>
+                        <option value="sawtooth">Sawtooth</option>
+                        <option value="square">Square</option>
+                      </select>
                     </label>
-                  )}
-                  <label>
-                    Tone{" "}
-                    <select
-                      aria-label="Tone"
-                      value={track.waveform}
-                      onChange={(e) =>
-                        patch({ waveform: e.target.value as Track["waveform"] })
-                      }
-                    >
-                      <option value="sine">Sine</option>
-                      <option value="triangle">Triangle</option>
-                      <option value="sawtooth">Sawtooth</option>
-                      <option value="square">Square</option>
-                    </select>
-                  </label>
-                </div>
-              )}
+                  </>
+                )}
+              </div>
               {(track.transform.shift !== 0 ||
                 track.transform.speed !== 1 ||
                 track.transform.gain !== 1 ||

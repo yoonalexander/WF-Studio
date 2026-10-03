@@ -13,7 +13,7 @@ export function Graph({
   simple = false,
   minimal = false,
   continuous = false,
-  appearance = "light",
+  appearance,
   transport = audio,
   onSampled,
 }: {
