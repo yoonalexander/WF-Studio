@@ -82,6 +82,8 @@ export function SimpleStudio({
     future,
   } = useStudio();
   const [addType, setAddType] = useState<Track["instrument"]>("synth");
+  const [tempo, setTempo] = useState(String(project.bpm));
+  useEffect(() => setTempo(String(project.bpm)), [project.id, project.bpm]);
   const [graphReady, setGraphReady] = useState(false);
   useEffect(() => setGraphReady(false), [engine]);
   const sampled = useCallback(() => setGraphReady(true), []);
@@ -177,15 +179,29 @@ export function SimpleStudio({
               type="number"
               min={30}
               max={300}
-              value={project.bpm}
-              onChange={(e) =>
-                change((p) => {
-                  p.bpm = Math.max(
-                    30,
-                    Math.min(300, Number(e.target.value) || 30),
-                  );
-                }, "bpm")
-              }
+              value={tempo}
+              onChange={(e) => {
+                const text = e.target.value;
+                setTempo(text);
+                const value = Number(text);
+                if (text && value >= 30 && value <= 300)
+                  change((p) => {
+                    p.bpm = value;
+                  }, "bpm");
+              }}
+              onBlur={() => {
+                const value = tempo
+                  ? Math.max(30, Math.min(300, Number(tempo) || project.bpm))
+                  : project.bpm;
+                setTempo(String(value));
+                if (value !== project.bpm)
+                  change((p) => {
+                    p.bpm = value;
+                  }, "bpm");
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") e.currentTarget.blur();
+              }}
             />{" "}
             BPM
           </label>

@@ -83,7 +83,12 @@ test("Simple studio follows continuous math, keeps layered voices alive and expo
   await page.goto("/studio");
   await expect(page.getByText("Saved on this device")).toBeVisible();
   await page.getByRole("button", { name: "New song", exact: true }).click();
-  await page.getByLabel("BPM", { exact: true }).fill("60");
+  const tempo = page.getByLabel("BPM", { exact: true });
+  await tempo.fill("");
+  await tempo.pressSequentially("6");
+  await expect(tempo).toHaveValue("6");
+  await tempo.pressSequentially("0");
+  await expect(tempo).toHaveValue("60");
   await page.getByLabel("Tone", { exact: true }).selectOption("sine");
   await page.getByLabel("Equation expression").fill("12 * x");
   await expect(page.getByLabel("Note interval")).toHaveCount(0);
