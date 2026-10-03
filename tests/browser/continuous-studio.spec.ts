@@ -83,6 +83,8 @@ test("Simple studio follows continuous math, keeps layered voices alive and expo
   await page.goto("/studio");
   await expect(page.getByText("Saved on this device")).toBeVisible();
   await page.getByRole("button", { name: "New song", exact: true }).click();
+  // Creating a song first saves the previous project asynchronously.
+  await expect(page.locator(".simple-sound")).toHaveCount(1);
   const tempo = page.getByLabel("BPM", { exact: true });
   await tempo.fill("");
   await tempo.pressSequentially("6");
@@ -90,6 +92,7 @@ test("Simple studio follows continuous math, keeps layered voices alive and expo
   await tempo.pressSequentially("0");
   await expect(tempo).toHaveValue("60");
   await page.getByLabel("Tone", { exact: true }).selectOption("sine");
+  await expect(tempo).toHaveValue("60");
   await page.getByLabel("Equation expression").fill("12 * x");
   await expect(page.getByLabel("Note interval")).toHaveCount(0);
   await expect(page.getByLabel("Scale", { exact: true })).toHaveCount(0);
@@ -221,6 +224,7 @@ test("Simple studio follows continuous math, keeps layered voices alive and expo
   expect(wav.toString("ascii", 0, 4)).toBe("RIFF");
   const rate = wav.readUInt32LE(24),
     channels = wav.readUInt16LE(22);
+  expect((wav.length - 44) / (rate * channels * 2)).toBeCloseTo(7, 2);
   for (const at of [0.3, 0.6, 1.2, 2.2, 3.5]) {
     let power = 0;
     for (let sample = 0; sample < 1024; sample++) {
@@ -273,6 +277,7 @@ test("Simple video keeps the whole curve in frame and uses moving sound points",
   await page.goto("/studio");
   await expect(page.getByText("Saved on this device")).toBeVisible();
   await page.getByRole("button", { name: "New song", exact: true }).click();
+  await expect(page.locator(".simple-sound")).toHaveCount(1);
   await page.getByLabel("BPM", { exact: true }).fill("300");
   await page.getByLabel("Loop length").selectOption("4");
   await page.getByLabel("Equation expression").fill("0");
