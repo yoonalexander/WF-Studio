@@ -379,7 +379,7 @@ export function createMathEngine(tracks: Track[], beatsPerBar = 4): MathEngine {
           }
           const v = a.map((arg) => Number(arg(x, b)));
           if (named.has(f)) return evaluators.get(named.get(f)!.id)!(v[0], b);
-          if (f === "floor" || f === "ceil" || f === "round")
+          if (f === "floor" || f === "ceil" || f === "round" || f === "sign")
             b.branch += `${branch}:${unary[f](v[0])};`;
           if (f === "frac") b.branch += `${branch}:${Math.floor(v[0])};`;
           if (f === "mod") b.branch += `${branch}:${Math.floor(v[0] / v[1])};`;
@@ -393,21 +393,29 @@ export function createMathEngine(tracks: Track[], beatsPerBar = 4): MathEngine {
               return mod(v[0], v[1]);
             case "clamp":
               return clamp(v[0], v[1], v[2]);
-            case "pulse":
-              return mod(x - (v[2] ?? 0), v[0]) < v[1] ? 1 : 0;
+            case "pulse": {
+              const on = mod(x - (v[2] ?? 0), v[0]) < v[1];
+              b.branch += `${branch}:${on ? 1 : 0};`;
+              return on ? 1 : 0;
+            }
             case "sequence":
             case "step":
+              b.branch += `${branch}:${Math.floor(x)};`;
               return v[mod(Math.floor(x), v.length)];
             case "beat":
+              b.branch += `${branch}:${Math.floor(x / v[0])};`;
               return mod(x, v[0]);
             case "bar":
+              b.branch += `${branch}:${Math.floor(x / (v[0] * beatsPerBar))};`;
               return mod(x, v[0] * beatsPerBar);
             case "quantize":
+              b.branch += `${branch}:${Math.round(v[0] / v[1])};`;
               return Math.round(v[0] / v[1]) * v[1];
             case "scale":
               return v[3] + ((v[0] - v[1]) / (v[2] - v[1])) * (v[4] - v[3]);
             case "noise":
             case "random":
+              b.branch += `${branch}:${Math.floor(x * 48)};`;
               return (
                 mod(
                   Math.sin(Math.floor(x * 48) * 127.1 + (v[0] ?? 1) * 311.7) *

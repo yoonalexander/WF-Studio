@@ -153,7 +153,8 @@ test("homepage dice, corner links and saved theme work without interrupting soun
   let previous = await page.evaluate(() =>
     localStorage.getItem("wf-one-equation"),
   );
-  for (let roll = 0; roll < 8; roll++) {
+  for (let roll = 0; roll < 32; roll++) {
+    if (roll === 16) await page.setViewportSize({ width: 390, height: 720 });
     await page.getByRole("button", { name: "Random equation" }).click();
     await expect
       .poll(() => page.evaluate(() => localStorage.getItem("wf-one-equation")))
@@ -163,6 +164,12 @@ test("homepage dice, corner links and saved theme work without interrupting soun
     );
     await expect(page.getByLabel("Rendered equation")).not.toBeEmpty();
     await expect(page.getByRole("alert")).toHaveCount(0);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(roll < 16 ? 1366 : 390);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollHeight),
+    ).toBeLessThanOrEqual(roll < 16 ? 768 : 720);
     await expect(
       page.getByRole("button", { name: "Pause", exact: true }),
     ).toBeVisible();

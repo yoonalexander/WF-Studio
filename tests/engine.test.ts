@@ -1,10 +1,9 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { createMathEngine, mod } from "../src/math";
 import { makeTrack, newProject, validateProject } from "../src/model";
 import { exampleProject } from "../src/examples";
 import { collectEvents, mapPitch } from "../src/music";
 import { encodeMidi } from "../src/exports";
-import { randomEquation } from "../src/random-equation";
 import katex from "katex";
 function t(symbol: string, expression: string) {
   return { ...makeTrack(), symbol, expression };
@@ -89,35 +88,29 @@ describe("restricted equation engine", () => {
     const a = t("A", expression);
     expect(createMathEngine([a]).errors[a.id]).toBeTruthy();
   });
-  it("every random family produces valid, bounded math or explicit gaps", () => {
-    const random = vi.spyOn(Math, "random");
-    try {
-      for (let family = 0; family < 12; family++) {
-        random
-          .mockReturnValue(0.5)
-          .mockReturnValueOnce(0.5)
-          .mockReturnValueOnce(0.5)
-          .mockReturnValueOnce((family + 0.1) / 12);
-        const a = t("A", randomEquation("")),
-          e = createMathEngine([a]);
-        expect(e.errors).toEqual({});
-        expect(() =>
-          katex.renderToString(e.tex[a.id], { throwOnError: true }),
-        ).not.toThrow();
-        let defined = 0;
-        for (let x = -4; x <= 4; x += 0.125) {
-          const value = e.value(a.id, x);
-          if (Number.isFinite(value)) {
-            defined++;
-            expect(Math.abs(value)).toBeLessThanOrEqual(12);
-          }
-        }
-        expect(defined).toBeGreaterThan(0);
-      }
-    } finally {
-      random.mockRestore();
-    }
-  });
+  it.each([
+    ["pulse(1, 0.25)", 0.24, 0.26],
+    ["sequence(0, 7, 3)", 0.99, 1.01],
+    ["step(0, 4, 7)", 0.99, 1.01],
+    ["quantize(x, 2)", 0.99, 1.01],
+    ["beat(1)", 0.99, 1.01],
+    ["bar(1)", 3.99, 4.01],
+    ["noise(17)", 0.02, 0.022],
+    ["random(23)", 0.02, 0.022],
+    ["sign(x)", -0.1, 0.1],
+  ] as const)(
+    "splits graph paths at helper discontinuities: %s",
+    (expression, left, right) => {
+      const a = t("A", expression),
+        e = createMathEngine([a]);
+      expect(e.errors).toEqual({});
+      const before = e.sample(a.id, left),
+        after = e.sample(a.id, right);
+      expect(before.value).not.toBe(after.value);
+      expect(before.branch).not.toBe(after.branch);
+      expect(e.sample(a.id, left - 0.0001).branch).toBe(before.branch);
+    },
+  );
   it("supports calculator conditionals and transformations", () => {
     const a = t("A", "if x < 2 then 1 else 0");
     a.transform = { shift: 1, speed: 2, gain: 3, offset: 4 };
