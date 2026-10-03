@@ -197,7 +197,7 @@ export function drawGraph(
     const active =
       !track ||
       (isTrackActive(project, track, beat) &&
-        (!simple || (track.volume > 0 && project.master > 0)));
+        (!(simple || continuous) || (track.volume > 0 && project.master > 0)));
     const rawColor = track?.color ?? "#f0e7ff";
     const color = minimal
       ? theme.text
@@ -266,7 +266,13 @@ export function drawGraph(
     }
     ctx.stroke();
     ctx.shadowBlur = 0;
-    if (!simple && playing && active && beat > view.start) {
+    if (
+      !simple &&
+      playing &&
+      active &&
+      beat > view.start &&
+      (!continuous || sounding.some((event) => event.trackId === track?.id))
+    ) {
       ctx.save();
       const curvePath = new Path2D();
       let connected = false,
@@ -299,6 +305,7 @@ export function drawGraph(
     if (
       playing &&
       !simple &&
+      !continuous &&
       active &&
       beat >= view.start &&
       beat <= view.start + view.span
@@ -315,7 +322,7 @@ export function drawGraph(
         ctx.fill();
       }
     }
-    if (simple && track) {
+    if ((simple || continuous) && track) {
       ctx.shadowBlur = 0;
       ctx.lineWidth = 1.2;
       ctx.strokeStyle = color;

@@ -139,10 +139,10 @@ function SongStudio({ onHome }: { onHome: () => void }) {
   latestProject.current = project;
   canSave.current = ready;
   useEffect(() => {
-    audio.setMode(viewMode === "simple" ? "continuous" : "sequenced");
+    audio.setMode("continuous");
     setPlaying(audio.playing);
     setBeat(audio.position());
-  }, [viewMode]);
+  }, []);
   useEffect(
     () => () => {
       if (canSave.current)
@@ -791,6 +791,7 @@ function SongStudio({ onHome }: { onHome: () => void }) {
             </aside>
             <div className="graph-area">
               <Graph
+                continuous
                 appearance={appearance}
                 playing={playing}
                 onSeek={seek}
@@ -1005,7 +1006,7 @@ function SongStudio({ onHome }: { onHome: () => void }) {
       {modal === "export" && (
         <ExportDialog
           appearance={appearance}
-          playbackMode={viewMode === "simple" ? "continuous" : "sequenced"}
+          playbackMode="continuous"
           close={() => setModal(null)}
           notify={notify}
           pause={pause}
@@ -1130,9 +1131,10 @@ function SongStudio({ onHome }: { onHome: () => void }) {
             <h3>A melody in four numbers</h3>
             <code>sequence(0, 3, 5, 7)</code>
             <p>
-              Each number is a semitone offset from the root note. Scale lock
-              chooses the nearest allowed note. The sequence changes every beat;
-              note interval controls how often it plays.
+              Each number is a semitone offset from the root note. The sequence
+              changes every beat. Both Studio views follow the equation
+              continuously; use sequence, floor or quantize to create steps, and
+              bounds to create rests.
             </p>
             <h3>Build with named functions</h3>
             <code>piecewise(x mod 4 &lt; 2, K(x), K(2*x))</code>
@@ -1144,7 +1146,7 @@ function SongStudio({ onHome }: { onHome: () => void }) {
             <h3>Mapping values</h3>
             <p>
               Trigger/gate modes detect crossings at 48 samples per beat. Pitch,
-              amplitude, filter, and pan sample at each note interval. Gate
+              amplitude, filter, and pan follow the current equation value. Gate
               sustains while the threshold is exceeded, up to four beats.
               Visual-only tracks draw without sounding.
             </p>

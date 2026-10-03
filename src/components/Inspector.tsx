@@ -7,6 +7,7 @@ import type { MathEngine } from "../math";
 import type { Track } from "../model";
 import { EquationEditor } from "./EquationEditor";
 import { soundPresets } from "../presets";
+import { isEquationEvent } from "../music";
 export function Field({
   label,
   children,
@@ -273,19 +274,10 @@ export function Inspector({ engine }: { engine: MathEngine }) {
                 </Field>
               </>
             ) : (
-              <Field label="Note interval">
-                <select
-                  aria-label="Note interval"
-                  value={track.interval}
-                  onChange={(e) => patch({ interval: Number(e.target.value) })}
-                >
-                  {[0.125, 0.25, 0.5, 1, 2, 4].map((n) => (
-                    <option key={n} value={n}>
-                      {n} beats
-                    </option>
-                  ))}
-                </select>
-              </Field>
+              <p className="hint">
+                Sound follows the equation continuously. Use sequence, floor or
+                quantize for steps, and bounds for rests.
+              </p>
             )}
             <Field label="Root MIDI note">
               <input
@@ -304,33 +296,37 @@ export function Inspector({ engine }: { engine: MathEngine }) {
                 }
               />
             </Field>
-            <Field label="Scale lock">
-              <select
-                aria-label="Scale lock"
-                value={track.scale}
-                onChange={(e) =>
-                  patch({ scale: e.target.value as Track["scale"] })
-                }
-              >
-                {[
-                  "chromatic",
-                  "major",
-                  "minor",
-                  "harmonic-minor",
-                  "pentatonic",
-                ].map((s) => (
-                  <option key={s}>{s}</option>
-                ))}
-              </select>
-            </Field>
-            <Range
-              label="Note length"
-              value={track.noteLength}
-              min={0.05}
-              max={4}
-              onChange={(noteLength) => patch({ noteLength }, "length")}
-              unit=" beats"
-            />
+            {isEquationEvent(track) && track.mapping === "pitch" && (
+              <Field label="Scale lock">
+                <select
+                  aria-label="Scale lock"
+                  value={track.scale}
+                  onChange={(e) =>
+                    patch({ scale: e.target.value as Track["scale"] })
+                  }
+                >
+                  {[
+                    "chromatic",
+                    "major",
+                    "minor",
+                    "harmonic-minor",
+                    "pentatonic",
+                  ].map((s) => (
+                    <option key={s}>{s}</option>
+                  ))}
+                </select>
+              </Field>
+            )}
+            {isEquationEvent(track) && (
+              <Range
+                label="Note length"
+                value={track.noteLength}
+                min={0.05}
+                max={4}
+                onChange={(noteLength) => patch({ noteLength }, "length")}
+                unit=" beats"
+              />
+            )}
             {["amplitude", "filter", "pan"].includes(track.mapping) && (
               <>
                 <Field label="Input minimum">
@@ -462,20 +458,22 @@ export function Inspector({ engine }: { engine: MathEngine }) {
               onChange={(detune) => patch({ detune }, "detune")}
               unit=" cents"
             />
-            {(["attack", "decay", "sustain", "release"] as const).map((k) => (
-              <Range
-                key={k}
-                label={k[0].toUpperCase() + k.slice(1)}
-                value={track[k]}
-                min={k === "sustain" ? 0 : k === "attack" ? 0.002 : 0.01}
-                max={k === "sustain" ? 1 : k === "release" ? 3 : 2}
-                onChange={(v) => patch({ [k]: v }, k)}
-                unit={k === "sustain" ? "" : " s"}
-              />
-            ))}
+            {isEquationEvent(track) &&
+              (["attack", "decay", "sustain", "release"] as const).map((k) => (
+                <Range
+                  key={k}
+                  label={k[0].toUpperCase() + k.slice(1)}
+                  value={track[k]}
+                  min={k === "sustain" ? 0 : k === "attack" ? 0.002 : 0.01}
+                  max={k === "sustain" ? 1 : k === "release" ? 3 : 2}
+                  onChange={(v) => patch({ [k]: v }, k)}
+                  unit={k === "sustain" ? "" : " s"}
+                />
+              ))}
             <p className="hint">
-              Oscillator and envelope controls apply to synths. Drum voices have
-              tuned envelopes.
+              {isEquationEvent(track)
+                ? "Oscillator and envelope controls apply to synths. Drum voices have tuned envelopes."
+                : "Continuous sounds use the oscillator, volume, filter, pan and detune. Use the equation to shape their timing."}
             </p>
           </>
         )}

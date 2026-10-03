@@ -483,11 +483,7 @@ export class AudioEngine {
             this.voices.set(stop, { start: at, end: stop.endsAt, event });
           }
         }
-        if (
-          this.mode === "sequenced" &&
-          this.metronome &&
-          Math.abs(beat - Math.round(beat)) < 0.001
-        ) {
+        if (this.metronome && Math.abs(beat - Math.round(beat)) < 0.001) {
           const o = ctx.createOscillator(),
             g = ctx.createGain();
           o.frequency.value = beat % p.beatsPerBar === 0 ? 1200 : 800;
