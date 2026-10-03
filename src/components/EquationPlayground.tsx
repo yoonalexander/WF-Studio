@@ -11,6 +11,7 @@ import { randomEquation } from "../random-equation";
 import { BoundsEditor } from "./BoundsEditor";
 import { readCases, writeCases } from "../bounds";
 import { SoundPicker } from "./SoundPicker";
+import { VolumeControl } from "./VolumeControl";
 import { soundKey, soundPreset } from "../sounds";
 import type { SoundId } from "../sounds";
 
@@ -277,17 +278,20 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
               <Dices size={16} />
               Random
             </button>
-            <SoundPicker
-              value={sound}
-              onChange={(id) => {
-                setSound(id);
-                try {
-                  localStorage.setItem(soundKey, id);
-                } catch {
-                  /* Storage is optional. */
-                }
-              }}
-            />
+            <div className="equation-sound-controls">
+              <SoundPicker
+                value={sound}
+                onChange={(id) => {
+                  setSound(id);
+                  try {
+                    localStorage.setItem(soundKey, id);
+                  } catch {
+                    /* Storage is optional. */
+                  }
+                }}
+              />
+              <VolumeControl />
+            </div>
             <span>
               {editing
                 ? "Enter to finish. x is time; y is pitch."

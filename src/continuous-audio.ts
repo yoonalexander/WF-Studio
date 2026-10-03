@@ -16,6 +16,7 @@ export class ContinuousAudio {
   private filter?: BiquadFilterNode;
   private shaper?: WaveShaperNode;
   private sound: SoundId = "electro";
+  private volume = 1;
   private soundTimer?: ReturnType<typeof setTimeout>;
   private changingSound = false;
   private timer?: ReturnType<typeof setInterval>;
@@ -23,6 +24,11 @@ export class ContinuousAudio {
   private anchorBeat = 0;
   private stoppedBeat = 0;
   private generation = 0;
+  setVolume(value: number) {
+    if (!Number.isFinite(value)) return;
+    this.volume = clamp(value, 0, 1);
+    this.control();
+  }
   setSound(id: SoundId) {
     if (id === this.sound) return;
     this.sound = id;
@@ -100,7 +106,7 @@ export class ContinuousAudio {
       this.oscillator.frequency.setTargetAtTime(frequency, now, 0.008);
     }
     this.gain.gain.setTargetAtTime(
-      valid && !this.changingSound ? preset.level : 0,
+      valid && !this.changingSound ? preset.level * this.volume : 0,
       now,
       0.012,
     );

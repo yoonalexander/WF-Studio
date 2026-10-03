@@ -53,6 +53,7 @@ test("sound wheel and expanded choices change real audio while keeping one conti
             oscillator: OscillatorNode;
             context: AudioContext;
             starts: number;
+            gain: GainNode;
           };
         }
       ).soundAudio;
@@ -61,6 +62,7 @@ test("sound wheel and expanded choices change real audio while keeping one conti
         frequency: a.oscillator.frequency.value,
         time: a.context.currentTime,
         starts: a.starts,
+        gain: a.gain.gain.value,
       };
     });
   const harmonics = () =>
@@ -105,6 +107,52 @@ test("sound wheel and expanded choices change real audio while keeping one conti
   const lead = await harmonics();
   expect(lead.fundamental).toBeGreaterThan(-50);
   expect(lead.ratio).toBeGreaterThan(0.1);
+  const volume = page.getByRole("slider", { name: "Volume", exact: true });
+  await expect(volume).toHaveValue("100");
+  await volume.fill("50");
+  await expect.poll(async () => (await state()).gain).toBeCloseTo(0.06, 3);
+  const half = await harmonics();
+  expect(lead.fundamental - half.fundamental).toBeCloseTo(6.02, 0);
+  await page.getByRole("button", { name: "Mute sound", exact: true }).click();
+  await expect(volume).toHaveValue("0");
+  await expect.poll(async () => (await state()).gain).toBeLessThan(0.00001);
+  const silence = await page.evaluate(async () => {
+    const a = (
+      window as unknown as {
+        soundAudio: { gain: GainNode; context: AudioContext };
+      }
+    ).soundAudio;
+    const analyser = a.context.createAnalyser();
+    a.gain.connect(analyser);
+    analyser.connect(a.context.destination);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const samples = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(samples);
+    a.gain.disconnect(analyser);
+    analyser.disconnect();
+    return Math.max(...samples.map(Math.abs));
+  });
+  expect(silence).toBeLessThan(0.00001);
+  await page.getByRole("button", { name: "Next sound", exact: true }).click();
+  await expect(status).toHaveText("Sound: Deep electro");
+  await expect
+    .poll(async () => (await state()).frequency)
+    .toBeCloseTo(start.frequency / 2, 0);
+  expect((await state()).gain).toBeLessThan(0.00001);
+  await page
+    .getByRole("button", { name: "Previous sound", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Unmute sound", exact: true }).click();
+  await expect(volume).toHaveValue("50");
+  await expect.poll(async () => (await state()).gain).toBeCloseTo(0.06, 3);
+  await volume.fill("0");
+  await expect.poll(async () => (await state()).gain).toBeLessThan(0.00001);
+  await page.getByRole("button", { name: "Unmute sound", exact: true }).click();
+  await expect(volume).toHaveValue("100");
+  await volume.press("ArrowLeft");
+  await expect(volume).toHaveValue("99");
+  await volume.press("ArrowRight");
+  await expect(volume).toHaveValue("100");
   await page.getByRole("button", { name: "Next sound", exact: true }).click();
   await expect(status).toHaveText("Sound: Deep electro");
   await expect
@@ -166,9 +214,14 @@ test("sound wheel and expanded choices change real audio while keeping one conti
     page.getByRole("button", { name: "Pause", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Pause", exact: true }).click();
+  await volume.fill("35");
+  await page.getByRole("button", { name: "Mute sound", exact: true }).click();
   await page.reload();
   await expect(status).toHaveText("Sound: Soft keys");
-  for (const width of [1366, 390, 320]) {
+  await expect(volume).toHaveValue("0");
+  await page.getByRole("button", { name: "Unmute sound", exact: true }).click();
+  await expect(volume).toHaveValue("35");
+  for (const width of [1366, 768, 651, 520, 390, 320]) {
     const height = width === 1366 ? 768 : 720;
     await page.setViewportSize({ width, height });
     expect(
@@ -177,6 +230,14 @@ test("sound wheel and expanded choices change real audio while keeping one conti
     expect(
       await page.evaluate(() => document.documentElement.scrollHeight),
     ).toBeLessThanOrEqual(height);
+    const volumeBox = (await volume.boundingBox())!;
+    const pickerBox = (await page.locator(".sound-picker").boundingBox())!;
+    expect(volumeBox.x).toBeGreaterThan(pickerBox.x + pickerBox.width);
+    expect(volumeBox.x + volumeBox.width).toBeLessThanOrEqual(width);
+    expect(volumeBox.y).toBeGreaterThan(pickerBox.y);
+    expect(volumeBox.y + volumeBox.height).toBeLessThanOrEqual(
+      pickerBox.y + pickerBox.height,
+    );
     await page.getByRole("button", { name: "Expand sound options" }).click();
     const box = (await page
       .getByRole("dialog", { name: "Choose a sound" })

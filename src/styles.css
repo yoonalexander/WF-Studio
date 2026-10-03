@@ -2218,6 +2218,7 @@ body:has(.simple-app) {
 }
 .equation-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   gap: 18px;
@@ -2240,6 +2241,79 @@ body:has(.simple-app) {
   color: #a92c2c;
   text-align: center;
   margin-top: 12px;
+}
+.equation-sound-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+.equation-volume {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text);
+}
+.equation-volume button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 36px;
+  border-radius: 6px;
+  color: var(--muted);
+}
+.equation-volume button:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.equation-volume input {
+  appearance: none;
+  width: 84px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.equation-volume input::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(
+    to right,
+    var(--text) var(--volume),
+    var(--line) var(--volume)
+  );
+}
+.equation-volume input:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+.equation-volume input::-moz-range-track {
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(
+    to right,
+    var(--text) var(--volume),
+    var(--line) var(--volume)
+  );
+}
+.equation-volume input::-webkit-slider-thumb {
+  appearance: none;
+  width: 10px;
+  height: 10px;
+  margin-top: -3.5px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--text);
+}
+.equation-volume input::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--text);
 }
 .sound-picker {
   position: relative;
@@ -2560,6 +2634,20 @@ body:has(.simple-app) {
     flex-basis: 100%;
     text-align: center;
   }
+  .equation-sound-controls {
+    gap: 8px;
+  }
+  .equation-sound-controls .sound-wheel {
+    width: 124px;
+  }
+  .equation-volume input {
+    width: 64px;
+  }
+  .sound-options {
+    left: 0;
+    right: auto;
+    transform-origin: bottom left;
+  }
   .equation-header {
     padding: 20px 22px;
   }
@@ -2580,6 +2668,9 @@ body:has(.simple-app) {
   }
 }
 @media (min-width: 651px) and (max-height: 900px) {
+  .equation-page:not(:has(.bounds-editor, .cm-editor)) .simple-graph {
+    height: clamp(220px, calc(100dvh - 380px), 530px);
+  }
   .simple-header {
     padding-top: 12px;
     padding-bottom: 12px;
