@@ -12,6 +12,7 @@ export function Graph({
   onError,
   simple = false,
   minimal = false,
+  continuous = false,
   appearance = "light",
   transport = audio,
   onSampled,
@@ -21,6 +22,7 @@ export function Graph({
   onError: (s: string) => void;
   simple?: boolean;
   minimal?: boolean;
+  continuous?: boolean;
   appearance?: "light" | "dark";
   transport?: Pick<typeof audio, "position" | "soundingNotes">;
   onSampled?: () => void;
@@ -49,6 +51,7 @@ export function Graph({
     playing,
     simple,
     minimal,
+    continuous,
     appearance,
     transport,
     onSampled,
@@ -60,6 +63,7 @@ export function Graph({
     playing,
     simple,
     minimal,
+    continuous,
     appearance,
     transport,
     onSampled,
@@ -122,7 +126,7 @@ export function Graph({
       start: sampleStart,
       span: sampleSpan,
       project,
-      simple: simple && !minimal,
+      simple: simple && !minimal && !continuous,
       count: Math.min(1800, Math.max(600, canvas.current?.clientWidth ?? 900)),
     });
     clearTimeout(timer.current);
@@ -145,6 +149,7 @@ export function Graph({
     arrangement,
     simple,
     minimal,
+    continuous,
     onError,
   ]);
   useEffect(() => {
@@ -185,6 +190,7 @@ export function Graph({
             s.transport.soundingNotes(),
             s.minimal,
             s.appearance,
+            s.continuous,
           );
           if (
             s.playing &&
@@ -291,7 +297,7 @@ export function Graph({
           minimal
             ? "Equation graph. The moving point follows the sustained sound. Click to move along the equation."
             : simple
-              ? "All sounds and notes, automatically fitted to the full loop. Click to move the playhead."
+              ? "All equations, automatically fitted to the full loop. Click to move playback."
               : "Equation graph. Drag to pan; use zoom buttons. Click to move the playhead."
         }
         role="img"

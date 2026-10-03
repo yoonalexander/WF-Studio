@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Play,
   Pause,
@@ -31,14 +31,6 @@ const instruments = [
   ["hat", "Hi-hat"],
   ["open-hat", "Open hi-hat"],
   ["clap", "Clap"],
-] as const;
-const beatOptions = [
-  [0.125, "⅛ beat"],
-  [0.25, "¼ beat"],
-  [0.5, "½ beat"],
-  [1, "1 beat"],
-  [2, "2 beats"],
-  [4, "4 beats"],
 ] as const;
 
 export function SimpleStudio({
@@ -90,6 +82,9 @@ export function SimpleStudio({
     future,
   } = useStudio();
   const [addType, setAddType] = useState<Track["instrument"]>("synth");
+  const [graphReady, setGraphReady] = useState(false);
+  useEffect(() => setGraphReady(false), [engine]);
+  const sampled = useCallback(() => setGraphReady(true), []);
   const track = project.tracks.find((t) => t.id === selectedId);
   const notes = audio.soundingNotes();
   const section = project.sections.find(
@@ -152,7 +147,9 @@ export function SimpleStudio({
           <button
             className="simple-play"
             aria-label={playing ? "Pause" : "Play"}
-            disabled={!ready || !project.tracks.length}
+            disabled={
+              !ready || !project.tracks.length || (!playing && !graphReady)
+            }
             onClick={onPlay}
           >
             {playing ? (
@@ -263,10 +260,17 @@ export function SimpleStudio({
             </button>
           </div>
         )}
-        <Graph simple playing={playing} onSeek={onSeek} onError={onError} />
+        <Graph
+          simple
+          continuous
+          playing={playing}
+          onSeek={onSeek}
+          onError={onError}
+          onSampled={sampled}
+        />
         <p className="simple-graph-key">
-          Curves = equations. Circles = notes. Filled circles = sounds playing
-          now.
+          Each moving point follows its sound. Use sequence or floor for steps,
+          and bounds for rests.
         </p>
         <section className="simple-sounds" aria-label="Your sounds">
           <div className="simple-sound-list">
@@ -372,7 +376,7 @@ export function SimpleStudio({
                     ? "Graph only"
                     : trigger
                       ? `Hits when the equation ${track.crossing === "falling" ? "falls below" : track.crossing === "either" ? "crosses" : track.crossing === "change" ? "changes integer" : "rises above"} ${track.threshold}`
-                      : `Equation sets ${track.mapping === "pitch" ? "pitch" : track.mapping} · one note every ${track.interval} beat${track.interval === 1 ? "" : "s"}`}
+                      : `Equation sets ${track.mapping === "pitch" ? "pitch" : track.mapping} continuously`}
                 </span>
               </div>
               <div
@@ -486,22 +490,6 @@ export function SimpleStudio({
                 ) : (
                   <>
                     <label>
-                      Note every{" "}
-                      <select
-                        aria-label="Note interval"
-                        value={track.interval}
-                        onChange={(e) =>
-                          patch({ interval: Number(e.target.value) })
-                        }
-                      >
-                        {beatOptions.map(([v, l]) => (
-                          <option key={v} value={v}>
-                            {l}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
                       Root{" "}
                       <select
                         aria-label="Root note"
@@ -536,41 +524,27 @@ export function SimpleStudio({
               </div>
               {!percussion && (
                 <div className="simple-sound-settings simple-melody-settings">
-                  <label>
-                    Scale{" "}
-                    <select
-                      aria-label="Scale"
-                      value={track.scale}
-                      onChange={(e) =>
-                        patch({ scale: e.target.value as Track["scale"] })
-                      }
-                    >
-                      <option value="chromatic">All notes</option>
-                      <option value="minor">Minor</option>
-                      <option value="major">Major</option>
-                      <option value="pentatonic">Pentatonic</option>
-                      <option value="harmonic-minor">Harmonic minor</option>
-                    </select>
-                  </label>
-                  <label>
-                    Note length{" "}
-                    <input
-                      aria-label="Note length"
-                      type="number"
-                      min={0.05}
-                      max={4}
-                      step={0.05}
-                      value={track.noteLength}
-                      onChange={(e) =>
-                        patch({
-                          noteLength: Math.max(
-                            0.05,
-                            Math.min(4, Number(e.target.value) || 0.05),
-                          ),
-                        })
-                      }
-                    />
-                  </label>
+                  {trigger && (
+                    <label>
+                      Note length{" "}
+                      <input
+                        aria-label="Note length"
+                        type="number"
+                        min={0.05}
+                        max={4}
+                        step={0.05}
+                        value={track.noteLength}
+                        onChange={(e) =>
+                          patch({
+                            noteLength: Math.max(
+                              0.05,
+                              Math.min(4, Number(e.target.value) || 0.05),
+                            ),
+                          })
+                        }
+                      />
+                    </label>
+                  )}
                   <label>
                     Tone{" "}
                     <select
@@ -593,7 +567,7 @@ export function SimpleStudio({
                 track.transform.gain !== 1 ||
                 track.transform.offset !== 0) && (
                 <div className="simple-arrangement-notice">
-                  Graph and notes also use shift {track.transform.shift}, speed{" "}
+                  Graph and sound also use shift {track.transform.shift}, speed{" "}
                   {track.transform.speed}×, gain {track.transform.gain}× and
                   offset {track.transform.offset}.
                   <button

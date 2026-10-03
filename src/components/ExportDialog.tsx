@@ -4,6 +4,7 @@ import { Modal } from "./Modal";
 import { Field } from "./Inspector";
 import { useStudio } from "../store";
 import { audio } from "../audio";
+import type { PlaybackMode } from "../audio";
 import {
   download,
   filename,
@@ -16,10 +17,12 @@ export function ExportDialog({
   close,
   notify,
   pause,
+  playbackMode = "sequenced",
 }: {
   close: () => void;
   notify: (s: string) => void;
   pause: () => void;
+  playbackMode?: PlaybackMode;
 }) {
   const project = useStudio((s) => s.project),
     [format, setFormat] = useState("wav"),
@@ -51,7 +54,7 @@ export function ExportDialog({
         download(encodeMidi(snapshot, start, end), `${base}.mid`);
       else if (format === "wav")
         download(
-          encodeWav(await audio.render(snapshot, start, end)),
+          encodeWav(await audio.render(snapshot, start, end, playbackMode)),
           `${base}.wav`,
         );
       else if (format === "video") {
@@ -63,6 +66,7 @@ export function ExportDialog({
           aspect,
           abort.current.signal,
           setProgress,
+          playbackMode,
         );
         download(result.blob, `${base}.${result.extension}`);
       } else {
@@ -181,8 +185,9 @@ export function ExportDialog({
       )}
       {format === "midi" && (
         <p className="hint">
-          MIDI carries notes and timing. Synth tones, filters, pan, and effects
-          are reproduced by your destination instrument.
+          {playbackMode === "continuous"
+            ? "MIDI converts the curves to discrete notes. Choose WAV or video to preserve continuous pitch and sound."
+            : "MIDI carries notes and timing. Synth tones, filters, pan, and effects are reproduced by your destination instrument."}
         </p>
       )}
       {format === "link" && (

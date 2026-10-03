@@ -48,15 +48,15 @@ The text editor accepts interval restrictions such as `4 * sin(x) { -2 <= x < 2 
 
 Use semicolons or newlines between cases. Chained bounds (`0 <= x < 2`), `and`/`or`, modulo and equality (`==`) work in conditions. Without otherwise, undefined regions draw no curve or dot and fade to silence; `y = 0` still plays C4. Graphs split at branch changes, and both graph sampling and audio use the same restricted evaluator. These text forms also work in Song studio and exports.
 
-**Song studio** at `/studio` contains both the **Simple view** and **Detailed view**. Simple provides the composing workspace: add/remove sounds, equations, instruments, mappings, timing, mute/solo, saving and exports. Its graph fits every layer and the full loop; hollow circles show scheduled notes and filled circles show voices playing. Detailed adds the full arrangement and visual editor. Both edit the same song, and the studio view choice is remembered. Existing arrangements and project libraries are preserved when moving between the studio and the one-equation page.
+**Song studio** at `/studio` contains both the **Simple view** and **Detailed view**. Simple layers continuous equation-controlled sounds with add/remove, instruments, mappings, mute/solo, saving and exports. Its graph fits every layer and the full loop; each sounding curve has one moving point on the audio clock. Pitch follows the actual value without an automatic note interval or scale lock. Use `sequence`, `floor`, or `quantize` for steps, and bounds for rests. Drum hits follow equation threshold crossings. Detailed adds the sequencer, arrangement and visual editor. Both edit the same song, playback continues when switching views, and the studio view choice is remembered. Existing arrangements and project libraries are preserved when moving between the studio and the one-equation page.
 
 1. Open Song studio, then press Play on the starter composition or create a new song/project.
 2. Add a Kick and enter `exp(-8 * (x mod 1))`. Event → Trigger detects the rising edge at 0.8.
 3. Add a Bass with `sequence(0, 0, -4, -2)`, mapped to pitch.
 4. Add a Lead and reference `B(x + 1) + 7`.
-5. Set BPM, root note, scale and note interval. Each x-unit is one beat.
+5. Set BPM and root note. Each x-unit is one beat. Detailed additionally provides scale locks and note intervals.
 6. Click arrangement sections to choose their active tracks. Gaps between sections play all enabled tracks.
-7. Export the loop or whole song as WAV, MIDI, video, or a portable project file. Remix links embed a compressed project in the URL fragment and create a new local copy when opened.
+7. Export the loop or whole song as WAV, MIDI, video, or a portable project file. Simple WAV/video preserve continuous sound; MIDI converts curves to discrete notes. Remix links embed a compressed project in the URL fragment and create a new local copy when opened.
 
 Local projects autosave to IndexedDB in this browser on this origin. **Project JSON files are the portable backup.** Clearing site data removes local projects. Local development and the deployed site have separate libraries.
 
@@ -64,7 +64,7 @@ Local projects autosave to IndexedDB in this browser on this origin. **Project J
 
 - Multiple equation tracks (up to 32), CodeMirror highlighting/completion/bracket matching, KaTeX notation and inline errors.
 - Restricted math AST interpreter; arithmetic, comparisons, logic, modulo, functions, lazy piecewise/conditional branches, deterministic seeded noise, named functions and transformations.
-- Pitch, trigger, gate, amplitude, filter, pan and visual mappings. Five scale locks, root note, note interval and length.
+- Continuous pitch, amplitude, filter and pan controls in Simple; equation-driven trigger/gate events. Detailed adds five scale locks, note intervals and lengths. Visual-only mappings and root notes are available in both.
 - Synth/bass with sine, triangle, saw and square oscillators; ADSR, cutoff, detune, pan and volume. Synthesized kick, snare, closed/open hat and clap. Master compressor and delay.
 - Audio-clock transport with look-ahead scheduling; play/pause/stop/restart, tempo, metronome and loop range. Visuals follow audio and cannot change its timing.
 - Worker-sampled high-DPI Canvas graphs, pan, zoom, reset, fullscreen, moving points, combined curve, follow mode, glow and five themes.
@@ -78,7 +78,7 @@ Local projects autosave to IndexedDB in this browser on this origin. **Project J
 
 `src/music.ts` maps the values to musical events. Both the live audio scheduler and exports use it. The same equation can drive pitch, thresholds, gain, cutoff, pan, or only graphics. The project model contains no Web Audio or library-specific objects.
 
-`src/audio.ts` schedules timestamps against AudioContext.currentTime on a 25 ms timer with a 120 ms horizon. Scheduling skips missed windows after suspension rather than bursting overdue notes. Edits re-anchor future scheduling and stop old voices. Native Web Audio is used instead of Tone.js to share the exact voice implementation with offline rendering and keep the dependency footprint smaller.
+`src/audio.ts` uses sustained voices in Simple and look-ahead note scheduling in Detailed. Simple evaluates continuous controls every 16 ms against AudioContext.currentTime; edits, mute and solo retune or fade existing voices. `src/sustained-voice.ts` shares that voice implementation with offline WAV/video rendering. Equation-driven events use a 120 ms scheduling horizon; Detailed runs its scheduler every 25 ms. Scheduling skips missed windows after suspension rather than bursting overdue notes. Native Web Audio keeps the dependency footprint smaller.
 
 `src/continuous-audio.ts` powers the main page with one sustained oscillator. It evaluates the equation every 16 ms, smoothly changes frequency, and keeps the graph point on the same audio clock. Invalid or undefined values fade to silence. Changing the equation retunes the existing oscillator rather than scheduling new notes. Pitch offsets are bounded to four octaves in either direction.
 
@@ -87,7 +87,7 @@ Local projects autosave to IndexedDB in this browser on this origin. **Project J
 ## Practical bounds
 
 - Expression: 1,024 characters, 256 AST nodes, 32 syntax levels, 16 named-function levels, 2,048 evaluation operations per sample. Cycles and invalid dependencies silence affected tracks.
-- Sequencer: crossings sampled at 48 samples per beat. Narrower pulses can be missed. Pitch/amplitude/filter/pan are sampled at note onset; they are not continuous audio-rate modulation. Gates hold up to four beats.
+- Simple continuous controls update every 16 ms live and 10 ms offline, with short parameter smoothing; they are not audio-rate waveform synthesis. Event crossings are sampled at 48 samples per beat, so narrower pulses can be missed. Detailed samples pitch/amplitude/filter/pan at note onset. Gates hold up to four beats.
 - Playback: maximum 256 simultaneous voices. Extreme event density may drop voices. Normal 32-track arrangements are supported; this is not an unlimited DAW.
 - Graph: resolution-aware sampling, maximum 1,800 points per track, 5-second worker timeout, discontinuity gaps and undefined-value suppression.
 - Import: 1 MB, 32 tracks / sections, finite bounded settings, unique names/IDs and non-overlapping sections. Share links: 24,000 encoded characters and 1 MB decoded limit.

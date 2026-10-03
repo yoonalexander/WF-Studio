@@ -52,7 +52,10 @@ export function newSimpleSong(): Project {
   return p;
 }
 export function noteName(note: number) {
-  return `${["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"][note % 12]}${Math.floor(note / 12) - 1}`;
+  const nearest = Math.round(note),
+    cents = Math.round((note - nearest) * 100);
+  const name = `${["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"][((nearest % 12) + 12) % 12]}${Math.floor(nearest / 12) - 1}`;
+  return `${name}${cents ? ` ${cents > 0 ? "+" : ""}${cents}¢` : ""}`;
 }
 export function soundState(
   project: Project,
@@ -83,5 +86,5 @@ export function soundState(
     ? track.mapping === "pitch"
       ? `Playing ${noteName(note.note)}`
       : "Playing"
-    : "Between notes";
+    : "Silent here";
 }

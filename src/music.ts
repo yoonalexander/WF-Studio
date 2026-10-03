@@ -37,6 +37,41 @@ export function mapPitch(value: number, track: Track) {
   }
   return best;
 }
+export const isEquationEvent = (track: Track) =>
+  track.mapping === "trigger" ||
+  track.mapping === "gate" ||
+  track.mode === "event";
+
+// Continuous controls use the actual value at the audio clock, without note grids
+// or implicit scale snapping. Expressions such as sequence/quantize create steps.
+export function continuousAt(
+  project: Project,
+  track: Track,
+  beat: number,
+  engine: MathEngine,
+): MusicEvent | undefined {
+  if (!isTrackActive(project, track, beat) || engine.errors[track.id]) return;
+  const value = engine.value(track.id, beat);
+  if (!Number.isFinite(value)) return;
+  const normalized = clamp(
+    (value - track.inputMin) / (track.inputMax - track.inputMin),
+    0,
+    1,
+  );
+  return {
+    trackId: track.id,
+    beat,
+    value,
+    duration: 0,
+    note:
+      track.mapping === "pitch"
+        ? clamp(track.baseNote + clamp(value, -48, 48), 12, 108)
+        : track.baseNote,
+    velocity: track.mapping === "amplitude" ? normalized : 1,
+    cutoff: track.mapping === "filter" ? 100 * 120 ** normalized : track.cutoff,
+    pan: track.mapping === "pan" ? normalized * 2 - 1 : track.pan,
+  };
+}
 export function eventAt(
   project: Project,
   track: Track,
@@ -109,6 +144,7 @@ export function collectEvents(
   start: number,
   end: number,
   engine = createMathEngine(project.tracks, project.beatsPerBar),
+  tracks = project.tracks,
 ): MusicEvent[] {
   const events: MusicEvent[] = [];
   for (
@@ -116,7 +152,7 @@ export function collectEvents(
     tick < end * RESOLUTION - 1e-6;
     tick++
   )
-    for (const track of project.tracks) {
+    for (const track of tracks) {
       const event = eventAt(project, track, tick / RESOLUTION, engine);
       if (event) {
         events.push(event);

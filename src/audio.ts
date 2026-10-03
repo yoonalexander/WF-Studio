@@ -1,7 +1,16 @@
 import type { Project, Track } from "./model";
 import { createMathEngine, clamp } from "./math";
-import { collectEvents, eventAt, RESOLUTION } from "./music";
+import {
+  collectEvents,
+  eventAt,
+  RESOLUTION,
+  continuousAt,
+  isEquationEvent,
+} from "./music";
 import type { MusicEvent } from "./music";
+import { sustainedVoice, usesNoise } from "./sustained-voice";
+
+export type PlaybackMode = "sequenced" | "continuous";
 type Ctx = AudioContext | OfflineAudioContext;
 function noiseBuffer(context: Ctx): AudioBuffer {
   const buffer = context.createBuffer(
@@ -60,6 +69,40 @@ export function createBus(
     },
   };
 }
+export function voiceTiming(track: Track, event: MusicEvent, bpm: number) {
+  const duration = (event.duration * 60) / bpm;
+  const drum = ["kick", "snare", "hat", "open-hat", "clap"].includes(
+    track.instrument,
+  );
+  const length = clamp(
+    drum
+      ? track.instrument === "open-hat"
+        ? 0.5
+        : track.instrument === "kick"
+          ? 0.35
+          : track.instrument === "snare"
+            ? 0.22
+            : track.instrument === "clap"
+              ? 0.18
+              : 0.08
+      : Math.max(duration, track.attack + 0.01) + track.release,
+    0.04,
+    8,
+  );
+  return {
+    duration,
+    drum,
+    length,
+    endsAfter:
+      (drum
+        ? length
+        : Math.max(
+            Math.min(track.attack, length / 3) +
+              Math.min(track.decay, length / 3),
+            duration,
+          ) + track.release) + 0.02,
+  };
+}
 export function scheduleVoice(
   context: Ctx,
   destination: AudioNode,
@@ -73,22 +116,9 @@ export function scheduleVoice(
     env = context.createGain(),
     pan = context.createStereoPanner(),
     filter = context.createBiquadFilter();
-  const duration = (event.duration * 60) / bpm;
-  const drum = ["kick", "snare", "hat", "open-hat", "clap"].includes(
-    track.instrument,
-  );
-  let length = drum
-    ? track.instrument === "open-hat"
-      ? 0.5
-      : track.instrument === "kick"
-        ? 0.35
-        : track.instrument === "snare"
-          ? 0.22
-          : track.instrument === "clap"
-            ? 0.18
-            : 0.08
-    : Math.max(duration, track.attack + 0.01) + track.release;
-  length = clamp(length, 0.04, 8);
+  const timing = voiceTiming(track, event, bpm),
+    { duration, drum } = timing;
+  let length = timing.length;
   env.gain.setValueAtTime(0.0001, t);
   pan.pan.value = event.pan;
   filter.type = drum && track.instrument !== "kick" ? "highpass" : "lowpass";
@@ -180,6 +210,27 @@ export function scheduleVoice(
 export class AudioEngine {
   context?: AudioContext;
   playing = false;
+  private mode: PlaybackMode = "sequenced";
+  private sustained = new Map<string, ReturnType<typeof sustainedVoice>>();
+  setMode(mode: PlaybackMode) {
+    if (this.mode === mode) return;
+    const beat = this.position();
+    this.mode = mode;
+    if (this.playing && this.context) {
+      clearInterval(this.timer);
+      this.silence();
+      for (const voice of this.sustained.values()) voice.stop();
+      this.sustained.clear();
+      this.anchorBeat = this.stoppedBeat = beat;
+      this.anchorTime = this.context.currentTime + 0.02;
+      this.nextTick = Math.ceil(beat * RESOLUTION);
+      this.schedule();
+      this.timer = setInterval(
+        () => this.schedule(),
+        mode === "continuous" ? 16 : 25,
+      );
+    }
+  }
   private project?: Project;
   private math = createMathEngine([]);
   private bus?: ReturnType<typeof createBus>;
@@ -200,7 +251,8 @@ export class AudioEngine {
   soundingNotes(): MusicEvent[] {
     if (!this.playing || !this.context || !this.project?.master) return [];
     const now = this.context.currentTime;
-    return [...this.voices.values()]
+    const beat = this.position();
+    const events = [...this.voices.values()]
       .filter(
         (v) =>
           v.start <= now &&
@@ -209,7 +261,18 @@ export class AudioEngine {
           (this.project?.tracks.find((t) => t.id === v.event.trackId)?.volume ??
             0) > 0,
       )
-      .map((v) => v.event);
+      .map((v) =>
+        this.mode === "continuous"
+          ? { ...v.event, beat, value: this.math.value(v.event.trackId, beat) }
+          : v.event,
+      );
+    if (this.mode === "continuous")
+      for (const track of this.project.tracks) {
+        if (isEquationEvent(track) || !track.volume) continue;
+        const event = continuousAt(this.project, track, beat, this.math);
+        if (event && event.velocity > 0) events.push(event);
+      }
+    return events;
   }
   private normalize(beat: number) {
     const p = this.project;
@@ -226,7 +289,9 @@ export class AudioEngine {
           0,
           this.normalize(
             this.anchorBeat +
-              ((this.context.currentTime - this.anchorTime) *
+              ((this.mode === "continuous"
+                ? Math.max(0, this.context.currentTime - this.anchorTime)
+                : this.context.currentTime - this.anchorTime) *
                 this.project.bpm) /
                 60,
           ),
@@ -235,6 +300,7 @@ export class AudioEngine {
   }
   update(project: Project) {
     const pos = this.position();
+    const old = this.project;
     const changed = this.project !== project;
     this.project = project;
     this.math = createMathEngine(project.tracks, project.beatsPerBar);
@@ -255,7 +321,26 @@ export class AudioEngine {
         0.02,
       );
     }
-    if (this.playing && changed) this.seek(pos);
+    if (this.playing && changed) {
+      if (this.mode === "sequenced") this.seek(pos);
+      else {
+        this.silence();
+        if (
+          old?.bpm !== project.bpm ||
+          JSON.stringify(old?.loop) !== JSON.stringify(project.loop)
+        ) {
+          this.anchorBeat = this.stoppedBeat = pos;
+          this.anchorTime = this.context!.currentTime;
+        }
+        this.nextTick = Math.ceil(
+          (this.anchorBeat +
+            ((this.context!.currentTime - this.anchorTime) * project.bpm) /
+              60) *
+            RESOLUTION,
+        );
+        this.controlContinuous();
+      }
+    }
   }
   async play(project: Project) {
     if (this.playing || this.starting) return;
@@ -279,7 +364,10 @@ export class AudioEngine {
       this.nextTick = Math.ceil(this.anchorBeat * RESOLUTION);
       this.playing = true;
       this.schedule();
-      this.timer = setInterval(() => this.schedule(), 25);
+      this.timer = setInterval(
+        () => this.schedule(),
+        this.mode === "continuous" ? 16 : 25,
+      );
     } finally {
       this.starting = false;
     }
@@ -295,6 +383,8 @@ export class AudioEngine {
     this.playing = false;
     clearInterval(this.timer);
     this.silence();
+    for (const voice of this.sustained.values()) voice.stop();
+    this.sustained.clear();
   }
   stop() {
     this.pause();
@@ -309,12 +399,50 @@ export class AudioEngine {
       this.anchorBeat = this.stoppedBeat;
       this.anchorTime = this.context.currentTime + 0.02;
       this.nextTick = Math.ceil(this.stoppedBeat * RESOLUTION);
+      this.controlContinuous();
+    }
+  }
+  private controlContinuous() {
+    const p = this.project,
+      ctx = this.context;
+    if (
+      this.mode !== "continuous" ||
+      !this.playing ||
+      !p ||
+      !ctx ||
+      !this.bus ||
+      !this.noise
+    )
+      return;
+    for (const [id, voice] of this.sustained) {
+      const track = p.tracks.find((track) => track.id === id);
+      if (
+        !track ||
+        track.mapping === "visual" ||
+        isEquationEvent(track) ||
+        voice.kind !== usesNoise(track)
+      ) {
+        voice.stop();
+        this.sustained.delete(id);
+      }
+    }
+    const beat = this.position(),
+      at = Math.max(ctx.currentTime, this.anchorTime);
+    for (const track of p.tracks) {
+      if (isEquationEvent(track) || track.mapping === "visual") continue;
+      let voice = this.sustained.get(track.id);
+      if (!voice) {
+        voice = sustainedVoice(ctx, this.bus.input, track, this.noise, at);
+        this.sustained.set(track.id, voice);
+      }
+      voice.control(track, continuousAt(p, track, beat, this.math), at);
     }
   }
   private schedule() {
     const ctx = this.context,
       p = this.project;
     if (!this.playing || !ctx || !p || !this.bus) return;
+    this.controlContinuous();
     const rawNow =
       this.anchorBeat + ((ctx.currentTime - this.anchorTime) * p.bpm) / 60;
     // Skip missed scheduling windows after tab suspension instead of bursting stale notes.
@@ -340,6 +468,7 @@ export class AudioEngine {
       }
       if (at >= ctx.currentTime) {
         for (const track of p.tracks) {
+          if (this.mode === "continuous" && !isEquationEvent(track)) continue;
           const event = eventAt(p, track, beat, this.math);
           if (event && this.voices.size < 256) {
             const stop = scheduleVoice(
@@ -354,7 +483,11 @@ export class AudioEngine {
             this.voices.set(stop, { start: at, end: stop.endsAt, event });
           }
         }
-        if (this.metronome && Math.abs(beat - Math.round(beat)) < 0.001) {
+        if (
+          this.mode === "sequenced" &&
+          this.metronome &&
+          Math.abs(beat - Math.round(beat)) < 0.001
+        ) {
           const o = ctx.createOscillator(),
             g = ctx.createGain();
           o.frequency.value = beat % p.beatsPerBar === 0 ? 1200 : 800;
@@ -373,7 +506,12 @@ export class AudioEngine {
       this.nextTick++;
     }
   }
-  async render(project: Project, start: number, end: number) {
+  async render(
+    project: Project,
+    start: number,
+    end: number,
+    mode: PlaybackMode = "sequenced",
+  ) {
     const seconds = ((end - start) * 60) / project.bpm;
     if (seconds > 180)
       throw new Error(
@@ -386,7 +524,16 @@ export class AudioEngine {
       ),
       bus = createBus(context, project),
       noise = noiseBuffer(context);
-    const events = collectEvents(project, start, end);
+    const engine = createMathEngine(project.tracks, project.beatsPerBar);
+    const events = collectEvents(
+      project,
+      start,
+      end,
+      engine,
+      mode === "continuous"
+        ? project.tracks.filter(isEquationEvent)
+        : project.tracks,
+    );
     for (const event of events) {
       const t = project.tracks.find((t) => t.id === event.trackId)!;
       scheduleVoice(
@@ -398,6 +545,27 @@ export class AudioEngine {
         project.bpm,
         noise,
       );
+    }
+    if (mode === "continuous") {
+      const voices = project.tracks
+        .filter(
+          (track) => !isEquationEvent(track) && track.mapping !== "visual",
+        )
+        .map((track) => ({
+          track,
+          voice: sustainedVoice(context, bus.input, track, noise, 0.01),
+        }));
+      for (let i = 0; i < Math.ceil(seconds * 100); i++) {
+        const elapsed = i / 100,
+          beat = start + (elapsed * project.bpm) / 60;
+        for (const { track, voice } of voices)
+          voice.control(
+            track,
+            continuousAt(project, track, beat, engine),
+            elapsed + 0.01,
+          );
+      }
+      for (const { voice } of voices) voice.stop(seconds + 0.01);
     }
     const buffer = await context.startRendering();
     bus.dispose();

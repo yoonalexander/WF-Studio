@@ -48,6 +48,7 @@ export function drawGraph(
   sounding: MusicEvent[] = [],
   minimal = false,
   appearance: "light" | "dark" = "light",
+  continuous = false,
 ) {
   const theme =
       minimal && appearance === "dark"
@@ -296,7 +297,7 @@ export function drawGraph(
       ctx.lineWidth = 1.2;
       ctx.strokeStyle = color;
       // These circles use the same eventAt results as the audio scheduler.
-      for (const event of (minimal ? [] : events).filter(
+      for (const event of (minimal || continuous ? [] : events).filter(
         (e) => e.trackId === track.id && e.velocity > 0,
       )) {
         if (!Number.isFinite(event.value) || track.volume === 0) continue;
@@ -307,7 +308,7 @@ export function drawGraph(
       }
       // Only voices that have actually reached their scheduled audio time light up.
       const voices = sounding.filter((e) => e.trackId === track.id);
-      for (const event of minimal ? voices.slice(-1) : voices) {
+      for (const event of minimal || continuous ? voices.slice(-1) : voices) {
         if (!Number.isFinite(event.value)) continue;
         ctx.globalAlpha = 1;
         ctx.fillStyle = color;
@@ -320,6 +321,7 @@ export function drawGraph(
   ctx.globalAlpha = 1;
   if (
     !minimal &&
+    !continuous &&
     (playing || !simple) &&
     beat >= view.start &&
     beat <= view.start + view.span

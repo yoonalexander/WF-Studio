@@ -143,13 +143,13 @@ export const simpleExampleInfo = [
     name: "Sine garden",
     category: "MELODY + BASS",
     description:
-      "Smooth equations become notes every beat. Change the melody curve and hear its pitches change.",
+      "Smooth equations control sustained melody and bass. Change the curve and hear the pitch move continuously.",
   },
   {
     name: "Piecewise playground",
     category: "CONDITIONAL RHYTHMS",
     description:
-      "An 8-beat loop with equation-controlled gaps. Note circles show exactly where each sound plays.",
+      "An 8-beat loop with equation-controlled rhythms. Moving points follow each sound along its curve.",
   },
 ];
 export function simpleExampleProject(index = 0): Project {

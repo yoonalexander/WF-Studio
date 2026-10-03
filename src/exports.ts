@@ -1,9 +1,11 @@
 import type { Project } from "./model";
-import { collectEvents } from "./music";
-import { audio } from "./audio";
+import { collectEvents, continuousAt, isEquationEvent } from "./music";
+import { audio, voiceTiming } from "./audio";
+import type { PlaybackMode } from "./audio";
 import { createMathEngine } from "./math";
 import { drawGraph } from "./graph-render";
 import type { Curve } from "./graph-render";
+import { fitComposition } from "./simple";
 export function download(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob),
     a = document.createElement("a");
@@ -165,6 +167,7 @@ export async function exportVideo(
   aspect: "wide" | "portrait" | "square",
   signal: AbortSignal,
   progress: (v: number) => void,
+  mode: PlaybackMode = "sequenced",
 ) {
   if (
     !("MediaRecorder" in window) ||
@@ -179,7 +182,7 @@ export async function exportVideo(
     "video/mp4",
   ].find((t) => MediaRecorder.isTypeSupported(t));
   if (!type) throw new Error("No supported video encoder.");
-  const buffer = await audio.render(project, start, end);
+  const buffer = await audio.render(project, start, end, mode);
   if (signal.aborted) throw new Error("Export canceled.");
   const canvas = document.createElement("canvas");
   canvas.width =
@@ -201,7 +204,29 @@ export async function exportVideo(
   const chunks: BlobPart[] = [];
   const engine = createMathEngine(project.tracks, project.beatsPerBar),
     count = 1000,
-    view = { start, span: Math.min(16, end - start), yCenter: 2, ySpan: 12 };
+    view = {
+      start,
+      span: mode === "continuous" ? end - start : Math.min(16, end - start),
+      yCenter: 2,
+      ySpan: 12,
+    };
+  const hits =
+    mode === "continuous"
+      ? collectEvents(
+          project,
+          start,
+          end,
+          engine,
+          project.tracks.filter(isEquationEvent),
+        ).map((event) => ({
+          event,
+          endsAfter: voiceTiming(
+            project.tracks.find((track) => track.id === event.trackId)!,
+            event,
+            project.bpm,
+          ).endsAfter,
+        }))
+      : [];
   let frame = 0,
     lastView = NaN;
   let curves: Curve[] = [];
@@ -209,7 +234,10 @@ export async function exportVideo(
   function paint() {
     const elapsed = Math.max(0, context.currentTime - origin),
       beat = Math.min(end, start + (elapsed * project.bpm) / 60);
-    view.start = start + Math.floor((beat - start) / view.span) * view.span;
+    view.start =
+      mode === "continuous"
+        ? start
+        : start + Math.floor((beat - start) / view.span) * view.span;
     if (view.start !== lastView) {
       lastView = view.start;
       curves = project.tracks.map((t) => {
@@ -227,7 +255,31 @@ export async function exportVideo(
         }
         return { id: t.id, values, breaks };
       });
+      if (mode === "continuous") {
+        const fitted = fitComposition(project, curves);
+        view.yCenter = fitted.yCenter;
+        view.ySpan = fitted.ySpan;
+      }
     }
+    const sounding =
+      mode === "continuous" && beat < end && project.master > 0
+        ? project.tracks.flatMap((track) => {
+            if (!track.volume) return [];
+            const event = continuousAt(project, track, beat, engine);
+            if (!event || event.velocity <= 0) return [];
+            if (
+              isEquationEvent(track) &&
+              !hits.some(
+                (hit) =>
+                  hit.event.trackId === track.id &&
+                  hit.event.beat <= beat &&
+                  ((beat - hit.event.beat) * 60) / project.bpm < hit.endsAfter,
+              )
+            )
+              return [];
+            return [event];
+          })
+        : [];
     drawGraph(
       ctx,
       canvas.width,
@@ -237,9 +289,18 @@ export async function exportVideo(
       view,
       beat,
       true,
+      "",
+      mode === "continuous",
+      [],
+      sounding,
+      false,
+      "light",
+      mode === "continuous",
     );
     ctx.fillStyle =
-      project.visuals.theme === "light" || project.visuals.theme === "mono"
+      mode === "continuous" ||
+      project.visuals.theme === "light" ||
+      project.visuals.theme === "mono"
         ? "#222831"
         : "#f0f3f6";
     ctx.font = "bold 28px sans-serif";

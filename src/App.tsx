@@ -126,6 +126,11 @@ function SongStudio({ onHome }: { onHome: () => void }) {
   const canSave = useRef(false);
   latestProject.current = project;
   canSave.current = ready;
+  useEffect(() => {
+    audio.setMode(viewMode === "simple" ? "continuous" : "sequenced");
+    setPlaying(audio.playing);
+    setBeat(audio.position());
+  }, [viewMode]);
   useEffect(
     () => () => {
       if (canSave.current)
@@ -885,6 +890,7 @@ function SongStudio({ onHome }: { onHome: () => void }) {
       )}
       {modal === "export" && (
         <ExportDialog
+          playbackMode={viewMode === "simple" ? "continuous" : "sequenced"}
           close={() => setModal(null)}
           notify={notify}
           pause={pause}

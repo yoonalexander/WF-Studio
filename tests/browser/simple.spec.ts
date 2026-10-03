@@ -143,7 +143,7 @@ test("compose from scratch in simple mode, fit the whole loop and show actual os
   await expect(page.locator(".simple-sound")).toHaveCount(1);
   await page.getByLabel("Project name").fill("My first loop");
   await page.getByLabel("Equation expression").fill("12 * sin(x * pi / 2)");
-  await page.getByLabel("Note interval").selectOption("1");
+  await expect(page.getByLabel("Note interval")).toHaveCount(0);
   await expect(page.getByText("Sampling…", { exact: true })).toHaveCount(0);
   const fitted = await page.locator(".simple-graph").evaluate((e) => ({
     start: Number((e as HTMLElement).dataset.start),
@@ -178,9 +178,19 @@ test("compose from scratch in simple mode, fit the whole loop and show actual os
       }),
     )
     .toBe(true);
-  await expect
-    .poll(() => page.locator(".simple-sound").getAttribute("data-sound-state"))
-    .toBe("Between notes");
+  const sustainedStarts = await page.evaluate(
+    () => (window as unknown as { testVoices: unknown[] }).testVoices.length,
+  );
+  await page.waitForTimeout(1100);
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { testVoices: unknown[] }).testVoices.length,
+    ),
+  ).toBe(sustainedStarts);
+  await expect(page.locator(".simple-sound")).toHaveAttribute(
+    "data-sound-state",
+    /^Playing/,
+  );
   await page.getByRole("button", { name: "Stop", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Play", exact: true }),
@@ -217,9 +227,7 @@ test("compose from scratch in simple mode, fit the whole loop and show actual os
             v.start <= e.testAudio.currentTime &&
             v.end > e.testAudio.currentTime,
         );
-        return (
-          active.length > 0 && active.every((v) => v.node.frequency.value < 151)
-        );
+        return active.some((v) => v.node.frequency.value < 151);
       }),
     )
     .toBe(true);
