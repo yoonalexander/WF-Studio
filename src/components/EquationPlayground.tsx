@@ -9,7 +9,7 @@ import { Graph } from "./Graph";
 import { EquationEditor } from "./EquationEditor";
 import { randomEquation } from "../random-equation";
 import { BoundsEditor } from "./BoundsEditor";
-import { readCases, writeCases } from "../bounds";
+import { readCases, writeCases, previewExtent } from "../bounds";
 import { SoundPicker } from "./SoundPicker";
 import { VolumeControl } from "./VolumeControl";
 import { soundKey, soundPreset } from "../sounds";
@@ -19,7 +19,7 @@ import { ThemeSwitch } from "./ThemeSwitch";
 
 const draftKey = "wf-one-equation";
 export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
-  const { project, load, track: update } = useStudio();
+  const { project, load, change } = useStudio();
   const [ready, setReady] = useState(false),
     [playing, setPlaying] = useState(false);
   const [graphReady, setGraphReady] = useState(false);
@@ -51,6 +51,9 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
     } catch {
       /* Editing still works without browser storage. */
     }
+    single.lengthBeats = single.loop.endBeat = previewExtent(
+      single.tracks[0].expression,
+    );
     load(single);
     setReady(true);
     return () => continuousAudio.pause();
@@ -78,7 +81,10 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
     if (!track) return;
     setGraphReady(false);
     setMessage("");
-    update(track.id, { expression });
+    change((p) => {
+      p.tracks[0].expression = expression;
+      p.lengthBeats = p.loop.endBeat = previewExtent(expression);
+    }, "one-equation");
     try {
       localStorage.setItem(draftKey, expression);
     } catch {

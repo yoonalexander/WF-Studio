@@ -2192,14 +2192,22 @@ body:has(.simple-app) {
   text-decoration: none;
 }
 .equation-playground {
+  display: flex;
+  flex-direction: column;
   width: min(100%, 1100px);
+  max-height: calc(100dvh - 140px);
   margin: auto;
   padding: 0 32px 60px;
 }
 .equation-page .simple-graph {
   height: clamp(220px, 55dvh, 530px);
+  min-height: 160px;
+  flex-shrink: 1;
 }
 .one-equation {
+  flex-shrink: 0;
+  width: 100%;
+  min-width: 0;
   max-width: 850px;
   margin: 10px auto 0;
 }

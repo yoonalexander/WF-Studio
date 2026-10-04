@@ -1,3 +1,8 @@
+import {
+  referenceEquations,
+  randomReferenceEquation,
+} from "./reference-equations";
+
 type RandomSource = () => number;
 type Parameters = ReturnType<typeof parameters>;
 
@@ -127,12 +132,20 @@ const groups: { category: string; build: ((p: Parameters) => string)[] }[] = [
   },
 ];
 
-export const randomEquationFamilies = groups.flatMap((group) =>
-  group.build.map((build) => ({
-    category: group.category,
-    generate: (random: RandomSource) => build(parameters(random)),
+export const randomEquationFamilies = [
+  ...groups.flatMap((group) =>
+    group.build.map((build) => ({
+      category: group.category,
+      generate: (random: RandomSource) => build(parameters(random)),
+    })),
+  ),
+  ...referenceEquations.map((reference) => ({
+    category: reference.category,
+    referenceId: reference.id,
+    generate: (random: RandomSource) =>
+      randomReferenceEquation(reference, parameters(random).pick),
   })),
-);
+];
 
 export function createRandomEquationGenerator(
   random: RandomSource = () => Math.random(),

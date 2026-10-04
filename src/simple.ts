@@ -20,12 +20,26 @@ export function fitComposition(
 ): View {
   let min = 0,
     max = 0;
+  const finite: number[] = [];
   for (const curve of curves) {
     if (!project.tracks.some((t) => t.id === curve.id && t.enabled)) continue;
     for (const value of curve.values) {
       if (!Number.isFinite(value)) continue;
       min = Math.min(min, value);
       max = Math.max(max, value);
+      finite.push(value);
+    }
+  }
+  // An asymptote cannot fit in a finite frame. Clip isolated extreme tails
+  // instead of flattening every ordinary part of the curve to the x-axis.
+  if (finite.length > 20) {
+    finite.sort((a, b) => a - b);
+    const low = finite[Math.floor((finite.length - 1) * 0.05)],
+      high = finite[Math.ceil((finite.length - 1) * 0.95)],
+      core = high - low;
+    if (core > 0.1) {
+      if (low - min > core * 4) min = Math.min(0, low - core * 0.25);
+      if (max - high > core * 4) max = Math.max(0, high + core * 0.25);
     }
   }
   const span = Math.max(2, max - min);

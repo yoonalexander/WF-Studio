@@ -34,17 +34,25 @@ describe("random equation exploration", () => {
         ).not.toThrow();
         const audible: number[] = [];
         for (let i = -128; i <= 128; i++) {
-          const value = engine.value(track.id, i / 32);
+          // A dyadic grid aliases the screenshot's dense triangle folds to zero.
+          const value = engine.value(
+            track.id,
+            i / ("referenceId" in family ? 31 : 32),
+          );
           if (Number.isFinite(value)) {
-            expect(Math.abs(value), expression).toBeLessThanOrEqual(24);
+            if (!("referenceId" in family))
+              expect(Math.abs(value), expression).toBeLessThanOrEqual(24);
             if (i >= 0 && i < 128) audible.push(value);
-          } else expect(family.category).toBe("gaps");
+          } else if (!("referenceId" in family))
+            expect(family.category).toBe("gaps");
         }
-        expect(audible.length, expression).toBeGreaterThanOrEqual(32);
+        expect(audible.length, expression).toBeGreaterThanOrEqual(
+          "referenceId" in family ? 8 : 32,
+        );
         expect(
           Math.max(...audible) - Math.min(...audible),
           expression,
-        ).toBeGreaterThan(0.5);
+        ).toBeGreaterThan("referenceId" in family ? 0 : 0.5);
       }
     },
   );
@@ -60,20 +68,29 @@ describe("random equation exploration", () => {
     try {
       const next = createRandomEquationGenerator(seeded(127));
       let expression = "";
-      for (let i = 0; i < 64; i++) {
+      for (let i = 0; i < 256; i++) {
         const previous = expression;
         expression = next(expression);
         expect(expression).not.toBe(previous);
       }
-      expect(drawn).toHaveLength(64);
+      expect(drawn).toHaveLength(256);
       for (let i = 0; i < drawn.length; i += 8)
         expect(
           new Set(drawn.slice(i, i + 8).map((draw) => draw.category)).size,
         ).toBe(8);
-      for (let i = 0; i < drawn.length; i += 32)
-        expect(
-          new Set(drawn.slice(i, i + 32).map((draw) => draw.index)).size,
-        ).toBe(32);
+      for (const category of new Set(drawn.map((d) => d.category))) {
+        const size = randomEquationFamilies.filter(
+          (f) => f.category === category,
+        ).length;
+        const selections = drawn.filter((d) => d.category === category);
+        for (let i = 0; i + size <= selections.length; i += size)
+          expect(
+            new Set(selections.slice(i, i + size).map((d) => d.index)).size,
+          ).toBe(size);
+      }
+      expect(new Set(drawn.map((d) => d.index)).size).toBe(
+        randomEquationFamilies.length,
+      );
       for (let i = 1; i < drawn.length; i++)
         expect(drawn[i].category).not.toBe(drawn[i - 1].category);
     } finally {

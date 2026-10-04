@@ -4,6 +4,20 @@ export interface EquationCase {
   otherwise?: boolean;
 }
 
+// Expand the one-frame preview for explicit numeric bounds outside [-4, 4].
+// This only chooses a viewport; the restricted evaluator still validates input.
+export function previewExtent(text: string) {
+  const number = "(-?\\d+(?:\\.\\d+)?)";
+  const matches = [
+    ...text.matchAll(new RegExp(`\\bx\\s*(?:<=|>=|<|>)\\s*${number}`, "g")),
+    ...text.matchAll(new RegExp(`${number}\\s*(?:<=|>=|<|>)\\s*x\\b`, "g")),
+  ];
+  return Math.min(
+    64,
+    Math.max(4, ...matches.map((m) => Math.ceil(Math.abs(Number(m[1]))))),
+  );
+}
+
 // This syntax is translated to the same restricted AST as ordinary equations.
 // It never executes strings or bypasses the engine's validation/work limits.
 export function readCases(text: string): EquationCase[] | undefined {

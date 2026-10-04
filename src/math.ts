@@ -10,6 +10,7 @@ export const helpers = [
   "asin",
   "acos",
   "atan",
+  "arctan",
   "sinh",
   "cosh",
   "tanh",
@@ -38,6 +39,7 @@ export const helpers = [
   "scale",
   "piecewise",
   "bounded",
+  "triangle",
 ];
 const reserved = new Set([
   ...helpers,
@@ -52,7 +54,12 @@ const reserved = new Set([
 ]);
 export const validSymbol = (s: string) =>
   /^[A-Za-z][A-Za-z0-9_]{0,15}$/.test(s) && !reserved.has(s);
-export const mod = (a: number, b: number) => ((a % b) + b) % b;
+export const mod = (a: number, b: number) => {
+  const remainder = a % b;
+  // Avoid adding/subtracting the divisor for already-positive remainders:
+  // that used to move 0.15 below a 0.15 pulse boundary through roundoff.
+  return remainder === 0 ? 0 : remainder / b < 0 ? remainder + b : remainder;
+};
 export const clamp = (x: number, a: number, b: number) =>
   Math.max(a, Math.min(b, x));
 type Value = number | boolean;
@@ -137,6 +144,7 @@ const unary: Record<string, (v: number) => number> = {
   asin: Math.asin,
   acos: Math.acos,
   atan: Math.atan,
+  arctan: Math.atan,
   sinh: Math.sinh,
   cosh: Math.cosh,
   tanh: Math.tanh,
@@ -150,6 +158,7 @@ const unary: Record<string, (v: number) => number> = {
   round: Math.round,
   sign: Math.sign,
   frac: (v) => mod(v, 1),
+  triangle: (v) => 1 - 4 * Math.abs(mod(v + 0.25, 1) - 0.5),
 };
 export function createMathEngine(tracks: Track[], beatsPerBar = 4): MathEngine {
   let nextBranch = 0;
