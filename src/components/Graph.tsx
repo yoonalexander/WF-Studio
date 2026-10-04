@@ -6,6 +6,8 @@ import { drawGraph } from "../graph-render";
 import type { Curve, View } from "../graph-render";
 import type { MusicEvent } from "../music";
 import { compositionRange, fitComposition } from "../simple";
+import { axisView } from "../axis-scale";
+import type { AxisScale } from "../axis-scale";
 export function Graph({
   playing,
   onSeek,
@@ -16,6 +18,7 @@ export function Graph({
   appearance,
   transport = audio,
   onSampled,
+  axisScale,
 }: {
   playing: boolean;
   onSeek: (beat: number) => void;
@@ -26,6 +29,7 @@ export function Graph({
   appearance?: "light" | "dark";
   transport?: Pick<typeof audio, "position" | "soundingNotes">;
   onSampled?: () => void;
+  axisScale?: AxisScale;
 }) {
   const project = useStudio((s) => s.project),
     selectedId = useStudio((s) => s.selectedId),
@@ -38,12 +42,13 @@ export function Graph({
     request = useRef(0),
     timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const workerWarm = useRef(false);
-  const [view, setView] = useState<View>(() =>
+  const [storedView, setView] = useState<View>(() =>
       simple
         ? fitComposition(project, [], minimal)
         : { start: 0, span: 16, yCenter: 2, ySpan: 12 },
     ),
     [sampling, setSampling] = useState(false);
+  const view = axisScale ? axisView(axisScale) : storedView;
   const state = useRef({
     project,
     selectedId,
@@ -55,6 +60,7 @@ export function Graph({
     appearance,
     transport,
     onSampled,
+    axisScale,
   });
   state.current = {
     project,
@@ -67,6 +73,7 @@ export function Graph({
     appearance,
     transport,
     onSampled,
+    axisScale,
   };
   const factory = useRef<() => Worker>(() => {
     throw new Error("Worker is not initialized.");
@@ -83,7 +90,7 @@ export function Graph({
         curves.current = e.data.samples;
         events.current = e.data.events ?? [];
         workerWarm.current = true;
-        if (state.current.simple)
+        if (state.current.simple && !state.current.axisScale)
           setView(
             fitComposition(
               state.current.project,
@@ -112,8 +119,8 @@ export function Graph({
   }, [onError]);
   const equations = JSON.stringify(project.tracks);
   const range = compositionRange(project, minimal);
-  const sampleStart = simple ? range.start : view.start;
-  const sampleSpan = simple ? range.span : view.span;
+  const sampleStart = simple && !axisScale ? range.start : view.start;
+  const sampleSpan = simple && !axisScale ? range.span : view.span;
   const arrangement = JSON.stringify(project.sections);
   useEffect(() => {
     setSampling(true);

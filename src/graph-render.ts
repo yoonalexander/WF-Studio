@@ -14,6 +14,8 @@ export interface Curve {
   id: string;
   values: Float32Array;
   breaks?: Uint8Array;
+  start?: number;
+  span?: number;
 }
 export interface View {
   start: number;
@@ -76,8 +78,12 @@ export function drawGraph(
     pad = { left: 50, right: 24, top: 30, bottom: 40 },
     w = width - pad.left - pad.right,
     h = height - pad.top - pad.bottom;
-  const px = (x: number) => pad.left + ((x - view.start) / view.span) * w,
-    py = (y: number) => pad.top + h / 2 - ((y - view.yCenter) / view.ySpan) * h;
+  const px = (x: number) =>
+      pad.left + (view.span > 0 ? (x - view.start) / view.span : 0.5) * w,
+    py = (y: number) =>
+      pad.top +
+      h / 2 -
+      (view.ySpan > 0 ? (y - view.yCenter) / view.ySpan : 0) * h;
   ctx.fillStyle = theme.bg;
   ctx.fillRect(0, 0, width, height);
   ctx.font = '11px "Courier New", monospace';
@@ -85,7 +91,7 @@ export function drawGraph(
   ctx.lineWidth = 1;
   const xStep = 2 ** Math.ceil(Math.log2(view.span / 12)),
     yStep = 2 ** Math.ceil(Math.log2(view.ySpan / 8));
-  if (!simple)
+  if (!simple && view.span > 0)
     for (
       let x = Math.ceil(view.start / xStep) * xStep;
       x <= view.start + view.span;
@@ -102,7 +108,7 @@ export function drawGraph(
       ctx.fillStyle = theme.text;
       ctx.fillText(String(Math.round(x * 100) / 100), pixel, height - 17);
     }
-  if (!simple)
+  if (!simple && view.ySpan > 0)
     for (
       let y = Math.ceil((view.yCenter - view.ySpan / 2) / yStep) * yStep;
       y <= view.yCenter + view.ySpan / 2;
@@ -169,6 +175,8 @@ export function drawGraph(
     }
     ctx.textAlign = "left";
   }
+  // Zero is a valid knob stop: show the axes, with no fabricated domain.
+  if (view.span === 0 || view.ySpan === 0) return;
   ctx.save();
   ctx.beginPath();
   ctx.rect(pad.left, pad.top, w, h);
@@ -189,7 +197,15 @@ export function drawGraph(
       for (let i = 0; i < breaks.length; i++)
         breaks[i] ||= curve.breaks?.[i] ?? 0;
     }
-    drawn = [{ id: "sum", values, breaks }];
+    drawn = [
+      {
+        id: "sum",
+        values,
+        breaks,
+        start: curves[0].start,
+        span: curves[0].span,
+      },
+    ];
   }
   for (const curve of drawn) {
     const track = project.tracks.find((t) => t.id === curve.id);
@@ -249,7 +265,10 @@ export function drawGraph(
     for (let i = 0; i < curve.values.length; i++) {
       const y = curve.values[i],
         pixel = py(y),
-        x = pad.left + (i / (curve.values.length - 1)) * w;
+        x = px(
+          (curve.start ?? view.start) +
+            (i / (curve.values.length - 1)) * (curve.span ?? view.span),
+        );
       if (
         !Number.isFinite(y) ||
         pixel < pad.top - 3 * h ||
@@ -280,7 +299,10 @@ export function drawGraph(
       for (let i = 0; i < curve.values.length; i++) {
         const y = curve.values[i],
           pixel = py(y),
-          x = pad.left + (i / (curve.values.length - 1)) * w;
+          x = px(
+            (curve.start ?? view.start) +
+              (i / (curve.values.length - 1)) * (curve.span ?? view.span),
+          );
         if (
           !Number.isFinite(y) ||
           pixel < pad.top - 3 * h ||
@@ -311,7 +333,8 @@ export function drawGraph(
       beat <= view.start + view.span
     ) {
       const index = Math.round(
-          ((beat - view.start) / view.span) * (curve.values.length - 1),
+          ((beat - (curve.start ?? view.start)) / (curve.span ?? view.span)) *
+            (curve.values.length - 1),
         ),
         y = curve.values[index];
       if (Number.isFinite(y)) {

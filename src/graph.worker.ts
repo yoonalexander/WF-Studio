@@ -25,7 +25,7 @@ self.onmessage = (
       breaks[i] = Number(i > 0 && point.branch !== branch);
       branch = point.branch;
     }
-    return { id: t.id, values, breaks };
+    return { id: t.id, values, breaks, start, span };
   });
   let events: ReturnType<typeof collectEvents> = [];
   if (e.data.simple && e.data.project) {

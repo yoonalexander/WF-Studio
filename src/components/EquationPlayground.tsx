@@ -16,13 +16,38 @@ import { soundKey, soundPreset } from "../sounds";
 import type { SoundId } from "../sounds";
 import { useAppearance } from "../appearance";
 import { ThemeSwitch } from "./ThemeSwitch";
+import { ScaleKnob } from "./ScaleKnob";
+import { scaleValue } from "../axis-scale";
 
 const draftKey = "wf-one-equation";
+const scaleKey = "wf-axis-scales";
 export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
   const { project, load, change } = useStudio();
   const [ready, setReady] = useState(false),
     [playing, setPlaying] = useState(false);
   const [graphReady, setGraphReady] = useState(false);
+  const [scales, setScales] = useState<{ x?: number; y: number }>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(scaleKey) ?? "null");
+      return {
+        x: typeof saved?.x === "number" ? scaleValue(saved.x) : undefined,
+        y: typeof saved?.y === "number" ? (scaleValue(saved.y) ?? 5) : 5,
+      };
+    } catch {
+      return { y: 5 };
+    }
+  });
+  const changeScale = (axis: "x" | "y", value: number) => {
+    setScales((previous) => {
+      const next = { ...previous, [axis]: value };
+      try {
+        localStorage.setItem(scaleKey, JSON.stringify(next));
+      } catch {
+        /* The knobs also work without browser storage. */
+      }
+      return next;
+    });
+  };
   const [boundsEditing, setBoundsEditing] = useState(false);
   const [sound, setSound] = useState<SoundId>(() => {
     try {
@@ -109,7 +134,7 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
     const keys = (e: KeyboardEvent) => {
       if (
         e.target instanceof HTMLElement &&
-        e.target.closest("button,a,input,.cm-editor")
+        e.target.closest("button,a,input,.cm-editor,[role=spinbutton]")
       )
         return;
       if (e.code === "Space") {
@@ -156,6 +181,10 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
             onSeek={(beat) => continuousAudio.seek(beat)}
             onError={notify}
             onSampled={sampled}
+            axisScale={{
+              x: scales.x ?? previewExtent(track?.expression ?? ""),
+              y: scales.y,
+            }}
           />
         )}
         <div
@@ -292,6 +321,23 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
                 }}
               />
               <VolumeControl />
+            </div>
+            <div className="equation-scales" aria-label="Graph scales">
+              <ScaleKnob
+                axis="x"
+                value={scales.x ?? previewExtent(track?.expression ?? "")}
+                onChange={(value) => changeScale("x", value)}
+              />
+              <ScaleKnob
+                axis="y"
+                value={scales.y}
+                onChange={(value) => changeScale("y", value)}
+              />
+              <span className="sr-only" id="scale-help">
+                Scroll up to increase; down to decrease. Click the number to
+                edit. Arrow keys or drag vertically also turn the knob. Scales
+                change the view of the graph.
+              </span>
             </div>
             <span>
               {editing
