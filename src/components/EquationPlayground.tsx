@@ -88,6 +88,7 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
     [project.tracks, project.beatsPerBar],
   );
   const track = project.tracks[0];
+  const xExtent = scales.x ?? previewExtent(track?.expression ?? "");
   const hasCases = useMemo(() => {
     try {
       return !!readCases(track?.expression ?? "");
@@ -97,8 +98,8 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
   }, [track?.expression]);
   const error = ready && track ? engine.errors[track.id] : undefined;
   useEffect(() => {
-    if (ready) continuousAudio.update(project);
-  }, [project, ready]);
+    if (ready) continuousAudio.update(project, xExtent);
+  }, [project, ready, xExtent]);
   useEffect(() => {
     continuousAudio.setSound(sound);
   }, [sound]);
@@ -182,7 +183,7 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
             onError={notify}
             onSampled={sampled}
             axisScale={{
-              x: scales.x ?? previewExtent(track?.expression ?? ""),
+              x: xExtent,
               y: scales.y,
             }}
           />
@@ -325,7 +326,7 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
             <div className="equation-scales" aria-label="Graph scales">
               <ScaleKnob
                 axis="x"
-                value={scales.x ?? previewExtent(track?.expression ?? "")}
+                value={xExtent}
                 onChange={(value) => changeScale("x", value)}
               />
               <ScaleKnob
@@ -336,7 +337,8 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
               <span className="sr-only" id="scale-help">
                 Scroll up to increase; down to decrease. Click the number to
                 edit. Swipe up/right to increase; down/left to decrease. Arrow
-                keys also work. Scales change the view of the graph.
+                keys also work. X sets the graph and playback range; Y changes
+                the vertical view.
               </span>
             </div>
             <span>

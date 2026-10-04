@@ -1,7 +1,6 @@
 import { createMathEngine, clamp } from "./math";
 import type { Project } from "./model";
 import type { MusicEvent } from "./music";
-import { compositionRange } from "./simple";
 import { soundPreset, saturationCurve } from "./sounds";
 import type { SoundId } from "./sounds";
 
@@ -23,6 +22,7 @@ export class ContinuousAudio {
   private anchorTime = 0;
   private anchorBeat = 0;
   private stoppedBeat = 0;
+  private xExtent?: number;
   private generation = 0;
   setVolume(value: number) {
     if (!Number.isFinite(value)) return;
@@ -66,9 +66,10 @@ export class ContinuousAudio {
       0.02,
     );
   }
-  update(project: Project) {
+  update(project: Project, xExtent = this.xExtent) {
     const beat = this.position();
     this.project = project;
+    this.xExtent = xExtent;
     this.math = createMathEngine(project.tracks, project.beatsPerBar);
     this.seek(beat);
     this.control();
@@ -81,8 +82,17 @@ export class ContinuousAudio {
         ? this.anchorBeat +
           ((this.context.currentTime - this.anchorTime) * p.bpm) / 60
         : this.stoppedBeat;
-    const { start, span } = compositionRange(p, true);
-    return start + ((((raw - start) % span) + span) % span);
+    const extent = this.xExtent ?? p.loop.endBeat;
+    if (extent === 0) return 0;
+    // Keep the clock precise even when the visible range is very large.
+    if (raw >= -extent && raw < extent) return raw;
+    const span = extent * 2;
+    const wrapped = raw % span;
+    return wrapped < -extent
+      ? wrapped + span
+      : wrapped >= extent
+        ? wrapped - span
+        : wrapped;
   }
   seek(beat: number) {
     this.stoppedBeat = beat;
