@@ -101,6 +101,9 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
     if (ready) continuousAudio.update(project, xExtent);
   }, [project, ready, xExtent]);
   useEffect(() => {
+    continuousAudio.setYExtent(scales.y);
+  }, [scales.y]);
+  useEffect(() => {
     continuousAudio.setSound(sound);
   }, [sound]);
   const changeExpression = (expression: string) => {
@@ -337,8 +340,8 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
               <span className="sr-only" id="scale-help">
                 Scroll up to increase; down to decrease. Click the number to
                 edit. Swipe up/right to increase; down/left to decrease. Arrow
-                keys also work. X sets the graph and playback range; Y changes
-                the vertical view.
+                keys also work. X sets the playback range. Sound plays only
+                while the dot is inside the visible Y range.
               </span>
             </div>
             <span>

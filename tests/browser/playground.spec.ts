@@ -4,6 +4,7 @@ test("bounded branches edit, persist and sound only where the graph is defined",
   page,
 }) => {
   await page.addInitScript(() => {
+    localStorage.setItem("wf-axis-scales", JSON.stringify({ y: 16 }));
     const evidence = {
       starts: 0,
       gain: undefined as GainNode | undefined,
@@ -345,6 +346,7 @@ test("the equation controls one sustained oscillator, without repeated note star
   page,
 }) => {
   await page.addInitScript(() => {
+    localStorage.setItem("wf-axis-scales", JSON.stringify({ y: 16 }));
     const evidence = {
       starts: 0,
       stops: 0,

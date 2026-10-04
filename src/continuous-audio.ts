@@ -23,7 +23,20 @@ export class ContinuousAudio {
   private anchorBeat = 0;
   private stoppedBeat = 0;
   private xExtent?: number;
+  private yExtent = Infinity;
   private generation = 0;
+  setYExtent(extent: number) {
+    this.yExtent = extent;
+    this.control();
+  }
+  private isVisible(value: number) {
+    return (
+      Number.isFinite(value) &&
+      this.yExtent > 0 &&
+      Math.abs(value) <= this.yExtent &&
+      (this.xExtent ?? this.project?.loop.endBeat ?? 0) > 0
+    );
+  }
   setVolume(value: number) {
     if (!Number.isFinite(value)) return;
     this.volume = clamp(value, 0, 1);
@@ -105,7 +118,7 @@ export class ContinuousAudio {
       return;
     const track = this.project.tracks[0];
     const value = this.math.value(track.id, this.position());
-    const valid = Number.isFinite(value) && !this.math.errors[track.id];
+    const valid = this.isVisible(value) && !this.math.errors[track.id];
     const now = this.context.currentTime;
     const preset = soundPreset(this.sound);
     if (valid) {
@@ -126,7 +139,7 @@ export class ContinuousAudio {
     const track = this.project.tracks[0],
       beat = this.position();
     const value = this.math.value(track.id, beat);
-    if (!Number.isFinite(value) || this.math.errors[track.id]) return [];
+    if (!this.isVisible(value) || this.math.errors[track.id]) return [];
     return [
       {
         trackId: track.id,
