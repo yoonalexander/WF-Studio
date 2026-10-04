@@ -6,6 +6,7 @@ import { newSimpleSong } from "../src/simple";
 describe("scaled graph rendering", () => {
   const context = () => {
     const points: [number, number][] = [];
+    const lines: [number, number][] = [];
     const ctx = new Proxy(
       { lineWidth: 1 },
       {
@@ -15,12 +16,14 @@ describe("scaled graph rendering", () => {
             return (x: number, y: number) => {
               expect(Number.isFinite(x) && Number.isFinite(y)).toBe(true);
               if (target.lineWidth === 1.8) points.push([x, y]);
+              if (target.lineWidth === 1.8 && key === "lineTo")
+                lines.push([x, y]);
             };
           return () => {};
         },
       },
     ) as unknown as CanvasRenderingContext2D;
-    return { ctx, points };
+    return { ctx, points, lines };
   };
   it("keeps old samples at their actual x coordinates while a new scale is sampled", () => {
     const { ctx, points } = context();
@@ -49,10 +52,37 @@ describe("scaled graph rendering", () => {
       "light",
     );
     expect(points).toEqual([
-      [250, 390],
-      [450, 230],
-      [650, 70],
+      [230.5, 399],
+      [437, 235],
+      [643.5, 71],
     ]);
+  });
+  it("lets steep continuous adaptive segments reach the canvas clip instead of discarding them", () => {
+    const { ctx, lines } = context();
+    const p = newSimpleSong();
+    drawGraph(
+      ctx,
+      874,
+      470,
+      p,
+      [
+        {
+          id: p.tracks[0].id,
+          positions: Float64Array.of(-4, 1, 4),
+          values: Float32Array.of(-5e6, 0, 3e6),
+        },
+      ],
+      axisView({ x: 4, y: 5 }),
+      0,
+      false,
+      "",
+      true,
+      [],
+      [],
+      true,
+      "light",
+    );
+    expect(lines).toHaveLength(2);
   });
   it("shows finite axes at zero without drawing a fabricated curve", () => {
     for (const scale of [

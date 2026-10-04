@@ -16,6 +16,7 @@ export interface Curve {
   breaks?: Uint8Array;
   start?: number;
   span?: number;
+  positions?: Float64Array;
 }
 export interface View {
   start: number;
@@ -23,6 +24,10 @@ export interface View {
   yCenter: number;
   ySpan: number;
 }
+export const graphPadding = (minimal = false) =>
+  minimal
+    ? { left: 24, right: 24, top: 30, bottom: 30 }
+    : { left: 50, right: 24, top: 30, bottom: 40 };
 export const graphThemes = {
   dark: { bg: "#171c28", grid: "#293141", axis: "#68788b", text: "#9daac0" },
   light: { bg: "#fcfcfa", grid: "#e3e6e8", axis: "#9babb3", text: "#667686" },
@@ -75,7 +80,7 @@ export function drawGraph(
                 text: "#111111",
               }
             : graphThemes[project.visuals.theme],
-    pad = { left: 50, right: 24, top: 30, bottom: 40 },
+    pad = graphPadding(minimal),
     w = width - pad.left - pad.right,
     h = height - pad.top - pad.bottom;
   const px = (x: number) =>
@@ -262,22 +267,29 @@ export function drawGraph(
     ctx.beginPath();
     let pen = false,
       last = 0;
+    // Adaptive traces already resolve poles/branch breaks. Let their steep
+    // continuous segments reach the viewport clip, including offscreen ends.
     for (let i = 0; i < curve.values.length; i++) {
       const y = curve.values[i],
         pixel = py(y),
         x = px(
-          (curve.start ?? view.start) +
-            (i / (curve.values.length - 1)) * (curve.span ?? view.span),
+          curve.positions?.[i] ??
+            (curve.start ?? view.start) +
+              (i / (curve.values.length - 1)) * (curve.span ?? view.span),
         );
       if (
         !Number.isFinite(y) ||
-        pixel < pad.top - 3 * h ||
-        pixel > pad.top + 4 * h
+        (!curve.positions &&
+          (pixel < pad.top - 3 * h || pixel > pad.top + 4 * h))
       ) {
         pen = false;
         continue;
       }
-      if (!pen || curve.breaks?.[i] || Math.abs(pixel - last) > h * 0.6)
+      if (
+        !pen ||
+        curve.breaks?.[i] ||
+        (!curve.positions && Math.abs(pixel - last) > h * 0.6)
+      )
         ctx.moveTo(x, pixel);
       else ctx.lineTo(x, pixel);
       pen = true;
@@ -300,8 +312,9 @@ export function drawGraph(
         const y = curve.values[i],
           pixel = py(y),
           x = px(
-            (curve.start ?? view.start) +
-              (i / (curve.values.length - 1)) * (curve.span ?? view.span),
+            curve.positions?.[i] ??
+              (curve.start ?? view.start) +
+                (i / (curve.values.length - 1)) * (curve.span ?? view.span),
           );
         if (
           !Number.isFinite(y) ||

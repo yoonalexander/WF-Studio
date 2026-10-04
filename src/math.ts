@@ -344,6 +344,7 @@ export function createMathEngine(tracks: Track[], beatsPerBar = 4): MathEngine {
             case "*":
               return Number(l) * Number(r);
             case "/":
+              b.branch += `${branch}:${Math.sign(Number(r))};`;
               return Number(l) / Number(r);
             case "^":
               return Number(l) ** Number(r);
@@ -392,6 +393,8 @@ export function createMathEngine(tracks: Track[], beatsPerBar = 4): MathEngine {
             b.branch += `${branch}:${unary[f](v[0])};`;
           if (f === "frac") b.branch += `${branch}:${Math.floor(v[0])};`;
           if (f === "mod") b.branch += `${branch}:${Math.floor(v[0] / v[1])};`;
+          if (f === "tan")
+            b.branch += `${branch}:${Math.floor((v[0] + Math.PI / 2) / Math.PI)};`;
           if (unary[f]) return unary[f](v[0]);
           switch (f) {
             case "min":

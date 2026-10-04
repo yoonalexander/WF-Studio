@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Minus, Plus, Crosshair, Maximize2 } from "lucide-react";
 import { useStudio } from "../store";
 import { audio } from "../audio";
-import { drawGraph } from "../graph-render";
+import { drawGraph, graphPadding } from "../graph-render";
 import type { Curve, View } from "../graph-render";
 import type { MusicEvent } from "../music";
 import { compositionRange, fitComposition } from "../simple";
@@ -135,6 +135,8 @@ export function Graph({
       project,
       simple: simple && !minimal && !continuous,
       count: Math.min(1800, Math.max(600, canvas.current?.clientWidth ?? 900)),
+      adaptiveView: minimal ? view : undefined,
+      height: canvas.current?.clientHeight,
     });
     clearTimeout(timer.current);
     timer.current = setTimeout(
@@ -152,6 +154,8 @@ export function Graph({
     equations,
     sampleStart,
     sampleSpan,
+    minimal ? view.yCenter : 0,
+    minimal ? view.ySpan : 0,
     project.beatsPerBar,
     arrangement,
     simple,
@@ -229,6 +233,7 @@ export function Graph({
       span: Math.min(256, Math.max(1, v.span * factor)),
       ySpan: Math.min(256, Math.max(2, v.ySpan * factor)),
     }));
+  const padding = graphPadding(minimal);
   return (
     <div
       className={`graph-panel ${simple ? "simple-graph" : ""}`}
@@ -328,10 +333,18 @@ export function Graph({
               ...d.view,
               start:
                 d.view.start -
-                (dx / (e.currentTarget.clientWidth - 74)) * d.view.span,
+                (dx /
+                  (e.currentTarget.clientWidth -
+                    padding.left -
+                    padding.right)) *
+                  d.view.span,
               yCenter:
                 d.view.yCenter +
-                (dy / (e.currentTarget.clientHeight - 70)) * d.view.ySpan,
+                (dy /
+                  (e.currentTarget.clientHeight -
+                    padding.top -
+                    padding.bottom)) *
+                  d.view.ySpan,
             });
           }
         }}
@@ -344,7 +357,8 @@ export function Graph({
                 Math.min(
                   minimal ? view.start + view.span : project.lengthBeats,
                   view.start +
-                    ((e.clientX - rect.left - 50) / (rect.width - 74)) *
+                    ((e.clientX - rect.left - padding.left) /
+                      (rect.width - padding.left - padding.right)) *
                       view.span,
                 ),
               ),

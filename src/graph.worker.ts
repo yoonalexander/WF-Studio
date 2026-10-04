@@ -1,6 +1,8 @@
 import { createMathEngine } from "./math";
 import type { Track, Project } from "./model";
 import { collectEvents } from "./music";
+import { sampleCurve } from "./graph-sampling";
+import type { View } from "./graph-render";
 self.onmessage = (
   e: MessageEvent<{
     id: number;
@@ -11,11 +13,21 @@ self.onmessage = (
     count: number;
     project?: Project;
     simple?: boolean;
+    adaptiveView?: View;
+    height?: number;
   }>,
 ) => {
   const { id, tracks, beatsPerBar, start, span, count } = e.data;
   const engine = createMathEngine(tracks, beatsPerBar);
   const samples = tracks.map((t) => {
+    if (e.data.adaptiveView)
+      return sampleCurve(
+        t.id,
+        (x) => engine.sample(t.id, x),
+        e.data.adaptiveView,
+        count,
+        e.data.height ?? 300,
+      );
     const values = new Float32Array(count);
     const breaks = new Uint8Array(count);
     let branch = "";
@@ -37,6 +49,12 @@ self.onmessage = (
   }
   self.postMessage(
     { id, samples, events, errors: engine.errors },
-    { transfer: samples.flatMap((s) => [s.values.buffer, s.breaks.buffer]) },
+    {
+      transfer: samples.flatMap((s) => [
+        s.values.buffer,
+        s.breaks!.buffer,
+        ...("positions" in s && s.positions ? [s.positions.buffer] : []),
+      ]),
+    },
   );
 };
