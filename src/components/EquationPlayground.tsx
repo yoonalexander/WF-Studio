@@ -335,8 +335,8 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
               />
               <span className="sr-only" id="scale-help">
                 Scroll up to increase; down to decrease. Click the number to
-                edit. Arrow keys or drag vertically also turn the knob. Scales
-                change the view of the graph.
+                edit. Swipe up/right to increase; down/left to decrease. Arrow
+                keys also work. Scales change the view of the graph.
               </span>
             </div>
             <span>

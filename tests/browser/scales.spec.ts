@@ -1,6 +1,91 @@
 import { test, expect, type Page } from "@playwright/test";
 import { referenceEquations } from "../../src/reference-equations";
 
+test.describe("mobile knob gestures", () => {
+  test.use({
+    hasTouch: true,
+    isMobile: true,
+    viewport: { width: 320, height: 720 },
+  });
+  test("touch swipes work from the number in all four directions, outside the dial, and reverse immediately at zero", async ({
+    page,
+    context,
+  }) => {
+    await page.goto("/");
+    const touch = await context.newCDPSession(page);
+    const point = (x: number, y: number) => ({ x, y, id: 1 });
+    const reset = async (axis: "X" | "Y", value = "5") => {
+      const box = (await page
+        .getByRole("button", { name: `Edit ${axis} scale`, exact: true })
+        .boundingBox())!;
+      await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+      const input = page.getByLabel(`${axis} scale value`, { exact: true });
+      await expect(input).toBeVisible();
+      await input.fill(value);
+      await input.press("Enter");
+    };
+    for (const axis of ["X", "Y"] as const) {
+      const dial = page.getByRole("spinbutton", {
+        name: `${axis} axis scale`,
+        exact: true,
+      });
+      for (const [dx, dy, expected] of [
+        [0, -40, "7.4"],
+        [40, 0, "7.4"],
+        [0, 40, "2.6"],
+        [-40, 0, "2.6"],
+      ] as const) {
+        await reset(axis);
+        const box = (await dial.boundingBox())!;
+        const x = box.x + box.width / 2,
+          y = box.y + box.height / 2;
+        await touch.send("Input.dispatchTouchEvent", {
+          type: "touchStart",
+          touchPoints: [point(x, y)],
+        });
+        await touch.send("Input.dispatchTouchEvent", {
+          type: "touchMove",
+          touchPoints: [point(x + dx, y + dy)],
+        });
+        await touch.send("Input.dispatchTouchEvent", {
+          type: "touchEnd",
+          touchPoints: [],
+        });
+        await expect(dial).toHaveAttribute("aria-valuenow", expected);
+        await expect(
+          page.getByLabel(`${axis} scale value`, { exact: true }),
+        ).toHaveCount(0);
+        expect(await page.evaluate(() => scrollY)).toBe(0);
+      }
+      await reset(axis, "1");
+      const box = (await dial.boundingBox())!;
+      const x = box.x + box.width / 2,
+        y = box.y + box.height / 2;
+      await touch.send("Input.dispatchTouchEvent", {
+        type: "touchStart",
+        touchPoints: [point(x, y)],
+      });
+      await touch.send("Input.dispatchTouchEvent", {
+        type: "touchMove",
+        touchPoints: [point(x - 40, y)],
+      });
+      await expect(dial).toHaveAttribute("aria-valuenow", "0");
+      await touch.send("Input.dispatchTouchEvent", {
+        type: "touchMove",
+        touchPoints: [point(x - 30, y)],
+      });
+      await expect(dial).toHaveAttribute("aria-valuenow", "0.6");
+      await touch.send("Input.dispatchTouchEvent", {
+        type: "touchCancel",
+        touchPoints: [],
+      });
+      await reset(axis);
+      await expect(dial).toHaveAttribute("aria-valuenow", "5");
+    }
+    await touch.detach();
+  });
+});
+
 async function enterScale(page: Page, axis: "X" | "Y", value: string) {
   await page
     .getByRole("button", { name: `Edit ${axis} scale`, exact: true })

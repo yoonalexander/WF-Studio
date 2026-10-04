@@ -14,7 +14,19 @@ export function ScaleKnob({
   const current = useRef({ value, onChange });
   current.current = { value, onChange };
   const previous = useRef(value);
-  const drag = useRef<{ y: number; value: number } | undefined>(undefined);
+  const drag = useRef<
+    | {
+        x: number;
+        y: number;
+        lastX: number;
+        lastY: number;
+        value: number;
+        pointer: number;
+        moved: boolean;
+      }
+    | undefined
+  >(undefined);
+  const suppressClick = useRef(false);
   const [angle, setAngle] = useState(0);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -68,7 +80,7 @@ export function ScaleKnob({
         aria-valuetext={`From ${-value} to ${value}`}
         aria-describedby="scale-help"
         tabIndex={0}
-        title="Scroll to turn. Click the number to type."
+        title="Scroll or swipe to turn. Click the number to type."
         onKeyDown={(event) => {
           if (event.target !== event.currentTarget) return;
           const delta = (
@@ -94,24 +106,71 @@ export function ScaleKnob({
           }
         }}
         onPointerDown={(event) => {
-          if ((event.target as HTMLElement).closest("button,input")) return;
-          event.currentTarget.setPointerCapture(event.pointerId);
-          drag.current = { y: event.clientY, value };
+          if (!event.isPrimary) return;
+          suppressClick.current = false;
+          if ((event.target as HTMLElement).closest("input")) return;
+          // Capture on the number button itself so a tap still opens editing,
+          // while swipes can start anywhere and continue beyond the dial.
+          const target =
+            (event.target as HTMLElement).closest("button") ??
+            event.currentTarget;
+          target.setPointerCapture(event.pointerId);
+          drag.current = {
+            x: event.clientX,
+            y: event.clientY,
+            lastX: event.clientX,
+            lastY: event.clientY,
+            value,
+            pointer: event.pointerId,
+            moved: false,
+          };
         }}
         onPointerMove={(event) => {
-          if (!drag.current) return;
-          onChange(
-            scrollScale(
-              drag.current.value,
-              (event.clientY - drag.current.y) * 6,
-            ),
-          );
+          const gesture = drag.current;
+          if (!gesture || gesture.pointer !== event.pointerId) return;
+          if (
+            !gesture.moved &&
+            Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) < 4
+          )
+            return;
+          gesture.moved = suppressClick.current = true;
+          const dx = event.clientX - gesture.lastX,
+            dy = event.clientY - gesture.lastY;
+          // Follow the dominant direction, so diagonal motion never doubles
+          // sensitivity. Incremental movement reverses immediately at zero.
+          const delta = Math.abs(dx) > Math.abs(dy) ? -dx : dy;
+          gesture.value = scrollScale(gesture.value, delta * 6);
+          gesture.lastX = event.clientX;
+          gesture.lastY = event.clientY;
+          onChange(gesture.value);
         }}
-        onPointerUp={() => {
+        onPointerUp={(event) => {
+          const gesture = drag.current;
+          if (!gesture || gesture.pointer !== event.pointerId) return;
           drag.current = undefined;
+          if (
+            !gesture.moved &&
+            event.pointerType === "touch" &&
+            (event.target as HTMLElement).closest("button")
+          ) {
+            // A browser can suppress the compatibility click after a swipe.
+            // Handle touch taps directly, and discard any later duplicate click.
+            setDraft(String(current.current.value));
+            setEditing(true);
+            suppressClick.current = true;
+          }
         }}
-        onPointerCancel={() => {
+        onPointerCancel={(event) => {
+          if (drag.current?.pointer !== event.pointerId) return;
           drag.current = undefined;
+          suppressClick.current = false;
+        }}
+        onClickCapture={(event) => {
+          if (!suppressClick.current) return;
+          suppressClick.current = false;
+          if (event.detail === 0) return;
+          event.preventDefault();
+          event.stopPropagation();
         }}
       >
         <span
