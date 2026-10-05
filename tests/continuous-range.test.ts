@@ -15,6 +15,59 @@ function transport(extent = 4) {
 }
 
 describe("homepage playback range", () => {
+  it("reveals one full traversal and keeps the completed line on subsequent loops", () => {
+    const { audio, clock } = transport();
+    audio.setReveal(true);
+    expect(audio.position()).toBe(-4);
+    expect(audio.revealBoundary()).toBe(-4);
+    clock.currentTime = 1;
+    expect(audio.position()).toBe(-2);
+    expect(audio.revealBoundary()).toBe(-2);
+    clock.currentTime = 4;
+    expect(audio.position()).toBe(-4);
+    expect(audio.revealBoundary()).toBeUndefined();
+    clock.currentTime = 12.5;
+    expect(audio.position()).toBe(-3);
+    expect(audio.revealBoundary()).toBeUndefined();
+  });
+
+  it("changes speed without moving the dot or losing reveal progress", () => {
+    const { audio, clock } = transport();
+    audio.setReveal(true);
+    clock.currentTime = 0.5;
+    audio.setSpeed(2);
+    expect(audio.position()).toBe(-3);
+    expect(audio.revealBoundary()).toBe(-3);
+    clock.currentTime = 1;
+    expect(audio.position()).toBe(-1);
+    expect(audio.revealBoundary()).toBe(-1);
+    audio.setSpeed(0.25);
+    expect(audio.position()).toBe(-1);
+    clock.currentTime = 3;
+    expect(audio.position()).toBe(0);
+    expect(audio.revealBoundary()).toBe(0);
+  });
+
+  it("holds reveal progress while paused and restarts at the left for a new equation or X range", () => {
+    const { audio, clock, project } = transport();
+    audio.setReveal(true);
+    clock.currentTime = 1;
+    audio.pause();
+    clock.currentTime = 100;
+    expect(audio.position()).toBe(-2);
+    expect(audio.revealBoundary()).toBe(-2);
+    const edited = structuredClone(project);
+    edited.tracks[0].expression = "2";
+    audio.update(edited);
+    expect(audio.position()).toBe(-4);
+    expect(audio.revealBoundary()).toBe(-4);
+    audio.update(edited, 8);
+    expect(audio.position()).toBe(-8);
+    expect(audio.revealBoundary()).toBe(-8);
+    audio.setReveal(false);
+    expect(audio.revealBoundary()).toBeUndefined();
+  });
+
   it("traverses an expanded range at the same tempo and wraps from its right edge to its left", () => {
     const { audio, clock } = transport(56.64);
     clock.currentTime = 28;

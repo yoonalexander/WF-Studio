@@ -40,7 +40,7 @@ test("mobile playback reaches both selected X edges, including live expansion an
         const width = this.canvas.getBoundingClientRect().width;
         evidence.dots.push(
           Number(graph.dataset.start) +
-            ((args[0] - 24) / (width - 48)) * Number(graph.dataset.span),
+            ((args[0] - 36) / (width - 72)) * Number(graph.dataset.span),
         );
       }
       return arc.apply(this, args);
@@ -52,7 +52,7 @@ test("mobile playback reaches both selected X edges, including live expansion an
     const box = (await canvas.boundingBox())!;
     await canvas.click({
       position: {
-        x: 24 + ((x + extent) / (2 * extent)) * (box.width - 48),
+        x: 36 + ((x + extent) / (2 * extent)) * (box.width - 72),
         y: box.height / 2,
       },
     });

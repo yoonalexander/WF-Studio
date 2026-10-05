@@ -24,7 +24,7 @@ test("a steep continuous line reaches the mobile frame rather than vanishing", a
         const canvas = node as HTMLCanvasElement;
         const box = canvas.getBoundingClientRect(),
           ratio = canvas.width / box.width;
-        const x = 24 + ((1.000003 + 4) / 8) * (box.width - 48);
+        const x = 36 + ((1.000003 + 4) / 8) * (box.width - 72);
         const y = 30 + ((5 - 3) / 10) * (box.height - 60);
         const data = canvas
           .getContext("2d")!
@@ -112,7 +112,7 @@ test("mobile sine-ratio tails remain visible at the reported scales, with the or
               const canvas = node as HTMLCanvasElement;
               const box = canvas.getBoundingClientRect();
               const ratio = canvas.width / box.width;
-              const px = 24 + ((point.x + 56.64) / 113.28) * (box.width - 48);
+              const px = 36 + ((point.x + 56.64) / 113.28) * (box.width - 72);
               const py = 30 + ((26.08 - point.y) / 52.16) * (box.height - 60);
               const data = canvas
                 .getContext("2d")!

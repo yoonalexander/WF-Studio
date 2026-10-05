@@ -2197,12 +2197,12 @@ body:has(.simple-app) {
   width: min(100%, 1100px);
   max-height: calc(100dvh - 140px);
   margin: auto;
-  padding: 0 32px 60px;
+  padding: 0 32px 24px;
 }
 .equation-page .simple-graph {
-  height: clamp(220px, 55dvh, 530px);
+  height: clamp(260px, 60dvh, 600px);
   min-height: 160px;
-  flex-shrink: 1;
+  flex: 0 1 auto;
 }
 .one-equation {
   flex-shrink: 0;
@@ -2229,13 +2229,14 @@ body:has(.simple-app) {
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 18px;
+  gap: 12px 18px;
   margin-top: 12px;
   font-size: 10px;
   color: var(--muted);
 }
 .equation-play,
-.equation-random {
+.equation-random,
+.equation-reveal {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -2243,6 +2244,35 @@ body:has(.simple-app) {
   min-height: 36px;
   color: var(--text);
   font-size: 11px;
+}
+.equation-hint {
+  margin: 0 0 4px;
+  text-align: center;
+  font-size: 10px;
+  color: var(--muted);
+}
+.equation-reveal {
+  border-radius: 6px;
+}
+.equation-reveal[aria-pressed="true"] {
+  background: var(--hover);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.equation-motion-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+}
+.equation-speed {
+  gap: 7px;
+}
+.equation-speed > svg {
+  color: var(--muted);
+}
+.equation-speed output {
+  min-width: 30px;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
 }
 .equation-error {
   font-size: 12px;
@@ -2747,12 +2777,15 @@ body:has(.simple-app) {
     gap: 10px;
     flex-wrap: wrap;
   }
-  .equation-actions > span {
-    flex-basis: 100%;
-    text-align: center;
-  }
   .equation-sound-controls {
     gap: 8px;
+    flex-basis: 100%;
+    justify-content: center;
+  }
+  .equation-motion-controls {
+    flex-basis: 100%;
+    justify-content: center;
+    gap: 14px;
   }
   .equation-sound-controls .sound-wheel {
     width: 124px;
@@ -2760,19 +2793,23 @@ body:has(.simple-app) {
   .equation-volume input {
     width: 64px;
   }
+  .equation-speed input {
+    width: 56px;
+  }
   .sound-options {
     left: 0;
     right: auto;
     transform-origin: bottom left;
   }
   .equation-header {
-    padding: 20px 22px;
+    padding: 16px 22px;
   }
   .equation-playground {
-    padding: 0 12px 36px;
+    padding: 0 0 8px;
+    max-height: calc(100dvh - 114px);
   }
   .equation-page .simple-graph {
-    height: clamp(200px, 40dvh, 390px);
+    height: clamp(250px, 52dvh, 520px);
   }
   .one-equation {
     padding: 0 14px;
@@ -2786,7 +2823,7 @@ body:has(.simple-app) {
 }
 @media (min-width: 651px) and (max-height: 900px) {
   .equation-page:not(:has(.bounds-editor, .cm-editor)) .simple-graph {
-    height: clamp(220px, calc(100dvh - 380px), 530px);
+    height: clamp(240px, calc(100dvh - 320px), 600px);
   }
   .simple-header {
     padding-top: 12px;

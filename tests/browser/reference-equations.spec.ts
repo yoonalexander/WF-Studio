@@ -66,7 +66,7 @@ test("the negative-only original is visible, seekable and remembered; long cases
     box = (await canvas.boundingBox())!;
   await canvas.click({
     position: {
-      x: 24 + ((-7.4 + 8) / 16) * (box.width - 48),
+      x: 36 + ((-7.4 + 8) / 16) * (box.width - 72),
       y: box.height / 2,
     },
   });

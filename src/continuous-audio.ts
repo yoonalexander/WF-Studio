@@ -24,7 +24,45 @@ export class ContinuousAudio {
   private stoppedBeat = 0;
   private xExtent?: number;
   private yExtent = Infinity;
+  private speed = 1;
+  private reveal = false;
+  private revealed = 0;
   private generation = 0;
+  private extent() {
+    return this.xExtent ?? this.project?.loop.endBeat ?? 0;
+  }
+  private elapsed() {
+    return this.playing && this.context && this.project
+      ? ((this.context.currentTime - this.anchorTime) *
+          this.project.bpm *
+          this.speed) /
+          60
+      : 0;
+  }
+  private revealDistance() {
+    return Math.min(this.extent() * 2, this.revealed + this.elapsed());
+  }
+  revealBoundary() {
+    if (!this.reveal || this.revealDistance() >= this.extent() * 2)
+      return undefined;
+    return -this.extent() + this.revealDistance();
+  }
+  setReveal(enabled: boolean) {
+    if (enabled === this.reveal) return;
+    this.reveal = enabled;
+    if (enabled) this.restartReveal();
+  }
+  restartReveal() {
+    this.revealed = 0;
+    this.reanchor(-this.extent());
+  }
+  setSpeed(value: number) {
+    if (!Number.isFinite(value)) return;
+    const beat = this.position();
+    this.revealed = this.revealDistance();
+    this.speed = clamp(value, 0.25, 4);
+    this.reanchor(beat);
+  }
   setYExtent(extent: number) {
     this.yExtent = extent;
     this.control();
@@ -81,20 +119,22 @@ export class ContinuousAudio {
   }
   update(project: Project, xExtent = this.xExtent) {
     const beat = this.position();
+    const changed =
+      this.extent() !== (xExtent ?? project.loop.endBeat) ||
+      this.project?.tracks[0]?.expression !== project.tracks[0]?.expression;
+    this.revealed = this.revealDistance();
     this.project = project;
     this.xExtent = xExtent;
     this.math = createMathEngine(project.tracks, project.beatsPerBar);
-    this.seek(beat);
-    this.control();
+    if (this.reveal && changed) this.restartReveal();
+    else this.reanchor(beat);
   }
   position() {
     const p = this.project;
     if (!p) return 0;
-    const raw =
-      this.playing && this.context
-        ? this.anchorBeat +
-          ((this.context.currentTime - this.anchorTime) * p.bpm) / 60
-        : this.stoppedBeat;
+    const raw = this.playing
+      ? this.anchorBeat + this.elapsed()
+      : this.stoppedBeat;
     const extent = this.xExtent ?? p.loop.endBeat;
     if (extent === 0) return 0;
     // Keep the clock precise even when the visible range is very large.
@@ -108,6 +148,15 @@ export class ContinuousAudio {
         : wrapped;
   }
   seek(beat: number) {
+    this.revealed = this.revealDistance();
+    if (this.reveal)
+      this.revealed = Math.max(
+        this.revealed,
+        clamp(beat + this.extent(), 0, this.extent() * 2),
+      );
+    this.reanchor(beat);
+  }
+  private reanchor(beat: number) {
     this.stoppedBeat = beat;
     this.anchorBeat = beat;
     this.anchorTime = this.context?.currentTime ?? 0;
@@ -192,6 +241,7 @@ export class ContinuousAudio {
   }
   pause() {
     this.generation++;
+    this.revealed = this.revealDistance();
     this.stoppedBeat = this.position();
     this.playing = false;
     clearInterval(this.timer);

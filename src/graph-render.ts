@@ -26,7 +26,7 @@ export interface View {
 }
 export const graphPadding = (minimal = false) =>
   minimal
-    ? { left: 24, right: 24, top: 30, bottom: 30 }
+    ? { left: 36, right: 36, top: 30, bottom: 30 }
     : { left: 50, right: 24, top: 30, bottom: 40 };
 export const graphThemes = {
   dark: { bg: "#171c28", grid: "#293141", axis: "#68788b", text: "#9daac0" },
@@ -56,6 +56,7 @@ export function drawGraph(
   minimal = false,
   appearance?: "light" | "dark",
   continuous = false,
+  revealUntil?: number,
 ) {
   const theme =
       appearance === "dark"
@@ -134,7 +135,7 @@ export function drawGraph(
   ctx.beginPath();
   if (py(0) > pad.top && py(0) < height - pad.bottom) {
     ctx.moveTo(pad.left, py(0));
-    ctx.lineTo(width - pad.right, py(0));
+    ctx.lineTo(width - pad.right + (minimal ? 16 : 0), py(0));
   }
   if (px(0) >= pad.left && px(0) < width - pad.right) {
     ctx.moveTo(px(0), pad.top);
@@ -153,8 +154,9 @@ export function drawGraph(
     };
     ctx.font = 'italic 17px "Times New Roman", serif';
     if (py(0) > pad.top && py(0) < height - pad.bottom) {
-      arrow(width - pad.right, py(0), false);
-      ctx.fillText("x", width - pad.right + 13, py(0) + 5);
+      const tip = width - pad.right + (minimal ? 16 : 0);
+      arrow(tip, py(0), false);
+      ctx.fillText("x", tip + 13, py(0) + 5);
     }
     if (px(0) >= pad.left && px(0) < width - pad.right) {
       arrow(px(0), pad.top, true);
@@ -264,6 +266,17 @@ export function drawGraph(
       ctx.shadowColor = color;
       ctx.shadowBlur = 8;
     }
+    ctx.save();
+    if (minimal && revealUntil !== undefined) {
+      ctx.beginPath();
+      ctx.rect(
+        pad.left,
+        pad.top,
+        Math.max(0, Math.min(w, px(revealUntil) - pad.left)),
+        h,
+      );
+      ctx.clip();
+    }
     ctx.beginPath();
     let pen = false,
       last = 0;
@@ -296,6 +309,7 @@ export function drawGraph(
       last = pixel;
     }
     ctx.stroke();
+    ctx.restore();
     ctx.shadowBlur = 0;
     if (
       !simple &&

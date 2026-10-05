@@ -52,9 +52,9 @@ describe("scaled graph rendering", () => {
       "light",
     );
     expect(points).toEqual([
-      [230.5, 399],
+      [236.5, 399],
       [437, 235],
-      [643.5, 71],
+      [637.5, 71],
     ]);
   });
   it("lets steep continuous adaptive segments reach the canvas clip instead of discarding them", () => {

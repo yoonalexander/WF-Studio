@@ -81,7 +81,7 @@ test("bounded branches edit, persist and sound only where the graph is defined",
     box = (await canvas.boundingBox())!;
   const seek = async (x: number) =>
     canvas.click({
-      position: { x: 24 + ((x + 4) / 8) * (box.width - 48), y: box.height / 2 },
+      position: { x: 36 + ((x + 4) / 8) * (box.width - 72), y: box.height / 2 },
     });
   await seek(-1);
   await expect.poll(gain).toBeGreaterThan(0.11);

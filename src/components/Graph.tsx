@@ -27,7 +27,9 @@ export function Graph({
   minimal?: boolean;
   continuous?: boolean;
   appearance?: "light" | "dark";
-  transport?: Pick<typeof audio, "position" | "soundingNotes">;
+  transport?: Pick<typeof audio, "position" | "soundingNotes"> & {
+    revealBoundary?: () => number | undefined;
+  };
   onSampled?: () => void;
   axisScale?: AxisScale;
 }) {
@@ -186,6 +188,14 @@ export function Graph({
           const beat = s.minimal
             ? s.transport.position()
             : Math.max(0, s.transport.position());
+          const revealUntil = s.minimal
+            ? s.transport.revealBoundary?.()
+            : undefined;
+          if (s.minimal) {
+            c.dataset.position = String(beat);
+            c.dataset.revealUntil =
+              revealUntil === undefined ? "complete" : String(revealUntil);
+          }
           drawGraph(
             ctx,
             rect.width,
@@ -202,6 +212,7 @@ export function Graph({
             s.minimal,
             s.appearance,
             s.continuous,
+            revealUntil,
           );
           if (
             s.playing &&

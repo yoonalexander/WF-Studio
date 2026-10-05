@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Play, Pause, ArrowUpRight, Dices } from "lucide-react";
+import { Play, Pause, ArrowUpRight, Dices, PenLine } from "lucide-react";
 import katex from "katex";
 import { useStudio } from "../store";
 import { newSimpleSong } from "../simple";
@@ -12,6 +12,7 @@ import { BoundsEditor } from "./BoundsEditor";
 import { readCases, writeCases, previewExtent } from "../bounds";
 import { SoundPicker } from "./SoundPicker";
 import { VolumeControl } from "./VolumeControl";
+import { SpeedControl } from "./SpeedControl";
 import { soundKey, soundPreset } from "../sounds";
 import type { SoundId } from "../sounds";
 import { useAppearance } from "../appearance";
@@ -21,11 +22,26 @@ import { scaleValue } from "../axis-scale";
 
 const draftKey = "wf-one-equation";
 const scaleKey = "wf-axis-scales";
+const playbackKey = "wf-equation-playback";
 export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
   const { project, load, change } = useStudio();
   const [ready, setReady] = useState(false),
     [playing, setPlaying] = useState(false);
   const [graphReady, setGraphReady] = useState(false);
+  const [playback, setPlayback] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(playbackKey) ?? "null");
+      return {
+        reveal: saved?.reveal === true,
+        speed:
+          typeof saved?.speed === "number" && Number.isFinite(saved.speed)
+            ? Math.max(0.25, Math.min(4, saved.speed))
+            : 1,
+      };
+    } catch {
+      return { reveal: false, speed: 1 };
+    }
+  });
   const [scales, setScales] = useState<{ x?: number; y: number }>(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(scaleKey) ?? "null");
@@ -103,6 +119,19 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
   useEffect(() => {
     continuousAudio.setYExtent(scales.y);
   }, [scales.y]);
+  useEffect(() => {
+    continuousAudio.setReveal(playback.reveal);
+  }, [playback.reveal]);
+  useEffect(() => {
+    continuousAudio.setSpeed(playback.speed);
+  }, [playback.speed]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(playbackKey, JSON.stringify(playback));
+    } catch {
+      /* Playback controls also work without storage. */
+    }
+  }, [playback]);
   useEffect(() => {
     continuousAudio.setSound(sound);
   }, [sound]);
@@ -246,6 +275,11 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
                 />
               </button>
             ))}
+          <p className="equation-hint">
+            {editing
+              ? "Enter to finish. x is time; y is pitch."
+              : "Click the equation to edit."}
+          </p>
           <div className="equation-actions">
             <button
               className="equation-play"
@@ -312,6 +346,15 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
               <Dices size={16} />
               Random
             </button>
+            <button
+              className="equation-reveal"
+              aria-label="Reveal mode"
+              aria-pressed={playback.reveal}
+              title="Draw the equation from left to right on the first pass"
+              onClick={() => setPlayback((p) => ({ ...p, reveal: !p.reveal }))}
+            >
+              <PenLine size={15} /> Reveal
+            </button>
             <div className="equation-sound-controls">
               <SoundPicker
                 value={sound}
@@ -326,29 +369,30 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
               />
               <VolumeControl />
             </div>
-            <div className="equation-scales" aria-label="Graph scales">
-              <ScaleKnob
-                axis="x"
-                value={xExtent}
-                onChange={(value) => changeScale("x", value)}
+            <div className="equation-motion-controls">
+              <SpeedControl
+                value={playback.speed}
+                onChange={(speed) => setPlayback((p) => ({ ...p, speed }))}
               />
-              <ScaleKnob
-                axis="y"
-                value={scales.y}
-                onChange={(value) => changeScale("y", value)}
-              />
-              <span className="sr-only" id="scale-help">
-                Scroll up to increase; down to decrease. Click the number to
-                edit. Swipe up/right to increase; down/left to decrease. Arrow
-                keys also work. X sets the playback range. Sound plays only
-                while the dot is inside the visible Y range.
-              </span>
+              <div className="equation-scales" aria-label="Graph scales">
+                <ScaleKnob
+                  axis="x"
+                  value={xExtent}
+                  onChange={(value) => changeScale("x", value)}
+                />
+                <ScaleKnob
+                  axis="y"
+                  value={scales.y}
+                  onChange={(value) => changeScale("y", value)}
+                />
+                <span className="sr-only" id="scale-help">
+                  Scroll up to increase; down to decrease. Click the number to
+                  edit. Swipe up/right to increase; down/left to decrease. Arrow
+                  keys also work. X sets the playback range. Sound plays only
+                  while the dot is inside the visible Y range.
+                </span>
+              </div>
             </div>
-            <span>
-              {editing
-                ? "Enter to finish. x is time; y is pitch."
-                : "Click the equation to edit."}
-            </span>
           </div>
           {(error || message) && (
             <p className="equation-error" role="alert">
