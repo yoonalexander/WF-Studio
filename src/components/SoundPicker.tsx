@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronUp, ChevronDown, Expand, Check, X } from "lucide-react";
+import { ChevronUp, ChevronDown, Expand } from "lucide-react";
+import { SoundLibrary } from "./SoundLibrary";
 import { sounds, soundPreset } from "../sounds";
 import type { SoundId } from "../sounds";
 
@@ -39,27 +40,11 @@ export function SoundPicker({
     wheel?.addEventListener("wheel", scroll, { passive: false });
     return () => wheel?.removeEventListener("wheel", scroll);
   }, []);
-  useEffect(() => {
-    if (!open) return;
-    const outside = (e: PointerEvent) => {
-      if (!root.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("pointerdown", outside);
-    root.current
-      ?.querySelector<HTMLButtonElement>(".sound-options [aria-pressed=true]")
-      ?.focus();
-    return () => document.removeEventListener("pointerdown", outside);
-  }, [open]);
   return (
     <div
       className="sound-picker"
       ref={root}
       onKeyDown={(e) => {
-        if (e.key === "Escape" && open) {
-          e.preventDefault();
-          setOpen(false);
-          expand.current?.focus();
-        }
         if (
           (e.key === "ArrowUp" || e.key === "ArrowDown") &&
           (e.target as HTMLElement).closest(".sound-wheel")
@@ -115,45 +100,17 @@ export function SoundPicker({
         <Expand size={14} />
       </button>
       {open && (
-        <div
-          className="sound-options"
-          id="sound-options"
-          role="dialog"
-          aria-label="Choose a sound"
-        >
-          <div className="sound-options-heading">
-            <span>Sound</span>
-            <button
-              aria-label="Close sound options"
-              onClick={() => {
-                setOpen(false);
-                expand.current?.focus();
-              }}
-            >
-              <X size={14} />
-            </button>
-          </div>
-          {sounds.map((sound) => (
-            <button
-              key={sound.id}
-              className="sound-option"
-              aria-label={sound.name}
-              aria-pressed={value === sound.id}
-              onClick={() => {
-                onChange(sound.id);
-                setMotion((m) => ({ serial: m.serial + 1, direction: "down" }));
-                setOpen(false);
-                expand.current?.focus();
-              }}
-            >
-              <span>
-                <strong>{sound.name}</strong>
-                <small>{sound.description}</small>
-              </span>
-              {value === sound.id && <Check size={13} />}
-            </button>
-          ))}
-        </div>
+        <SoundLibrary
+          value={value}
+          onChange={(id) => {
+            onChange(id);
+            setMotion((m) => ({ serial: m.serial + 1, direction: "down" }));
+          }}
+          onClose={() => {
+            setOpen(false);
+            expand.current?.focus();
+          }}
+        />
       )}
     </div>
   );

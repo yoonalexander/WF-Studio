@@ -3,6 +3,7 @@ import type { Project } from "./model";
 import type { MusicEvent } from "./music";
 import { soundPreset, saturationCurve } from "./sounds";
 import type { SoundId } from "./sounds";
+import { IconicVoice } from "./iconic-voice";
 
 // The one-equation page uses one sustained oscillator, rather than note events.
 export class ContinuousAudio {
@@ -14,6 +15,7 @@ export class ContinuousAudio {
   private gain?: GainNode;
   private filter?: BiquadFilterNode;
   private shaper?: WaveShaperNode;
+  private iconic?: IconicVoice;
   private sound: SoundId = "electro";
   private volume = 1;
   private soundTimer?: ReturnType<typeof setTimeout>;
@@ -102,8 +104,9 @@ export class ContinuousAudio {
     const preset = soundPreset(this.sound);
     this.acidLastValue = undefined;
     if (preset.waveform === "custom") {
-      const real = new Float32Array(preset.harmonics.length);
-      const imaginary = Float32Array.from(preset.harmonics);
+      const harmonics = preset.harmonics ?? [0, 1];
+      const real = new Float32Array(harmonics.length);
+      const imaginary = Float32Array.from(harmonics);
       this.oscillator.setPeriodicWave(
         this.context.createPeriodicWave(real, imaginary),
       );
@@ -119,6 +122,7 @@ export class ContinuousAudio {
       this.context.currentTime,
       0.02,
     );
+    this.iconic?.configure(preset);
   }
   update(project: Project, xExtent = this.xExtent) {
     const beat = this.position();
@@ -173,15 +177,16 @@ export class ContinuousAudio {
     const valid = this.isVisible(value) && !this.math.errors[track.id];
     const now = this.context.currentTime;
     const preset = soundPreset(this.sound);
+    let frequency = 0;
     if (valid) {
-      const frequency =
+      frequency =
         440 *
         2 **
           ((track.baseNote - 69 + preset.octave + clamp(value, -48, 48)) / 12);
       this.oscillator.frequency.setTargetAtTime(
         frequency,
         now,
-        preset.id === "acid-303" ? preset.glide : 0.008,
+        preset.glide ?? 0.008,
       );
     }
     if (preset.id === "acid-303" && this.filter) {
@@ -195,11 +200,11 @@ export class ContinuousAudio {
         this.acidEnvelopeStarted = now;
       if (valid) {
         const envelope = Math.exp(
-          -(now - this.acidEnvelopeStarted) / preset.envelopeDecay,
+          -(now - this.acidEnvelopeStarted) / (preset.envelopeDecay ?? 0.18),
         );
         const cutoff =
           preset.cutoff * 2 ** (clamp(value, -24, 24) / 12) +
-          preset.envelopeRange * envelope;
+          (preset.envelopeRange ?? 0) * envelope;
         this.filter.frequency.setTargetAtTime(
           Math.min(7000, cutoff),
           now,
@@ -208,8 +213,11 @@ export class ContinuousAudio {
       }
       this.acidLastValue = valid ? value : undefined;
     }
+    const articulation = this.iconic?.update(frequency, value, valid) ?? 1;
     this.gain.gain.setTargetAtTime(
-      valid && !this.changingSound ? preset.level * this.volume : 0,
+      valid && !this.changingSound
+        ? preset.level * this.volume * articulation
+        : 0,
       now,
       0.012,
     );
@@ -251,7 +259,15 @@ export class ContinuousAudio {
     shaper.connect(filter);
     filter.connect(gain);
     gain.connect(this.context.destination);
+    const iconic = new IconicVoice(
+      this.context,
+      oscillator,
+      shaper,
+      filter,
+      gain,
+    );
     oscillator.onended = () => {
+      iconic.dispose();
       oscillator.disconnect();
       shaper.disconnect();
       filter.disconnect();
@@ -261,6 +277,7 @@ export class ContinuousAudio {
     this.gain = gain;
     this.filter = filter;
     this.shaper = shaper;
+    this.iconic = iconic;
     this.changingSound = false;
     this.configureSound();
     this.anchorBeat = this.stoppedBeat;
@@ -284,6 +301,7 @@ export class ContinuousAudio {
       this.oscillator.stop(this.context.currentTime + 0.04);
     }
     this.oscillator = undefined;
+    this.iconic = undefined;
     this.gain = undefined;
     this.filter = undefined;
     this.shaper = undefined;

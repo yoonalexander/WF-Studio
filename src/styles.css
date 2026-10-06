@@ -2505,6 +2505,10 @@ body:has(.simple-app) {
   line-height: 20px;
   font-size: 11px;
   font-weight: 500;
+  max-width: calc(100% - 22px);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .sound-wheel-up,
 .sound-wheel-down {
@@ -2548,58 +2552,239 @@ body:has(.simple-app) {
   color: var(--text);
 }
 .sound-options {
-  position: absolute;
-  right: 0;
-  bottom: calc(100% + 12px);
-  width: 244px;
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: 780px;
   max-width: calc(100vw - 32px);
-  padding: 8px;
+  height: 640px;
+  max-height: calc(100dvh - 40px);
+  padding: 0;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 18px;
   background: var(--panel);
-  box-shadow: 0 8px 32px #00000016;
-  z-index: 30;
-  transform-origin: bottom right;
+  color: var(--text);
+  text-align: left;
+  box-shadow: 0 20px 80px #00000028;
+  overflow: hidden;
   animation: sound-options-in 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.sound-options[open] {
+  display: flex;
+  flex-direction: column;
+}
+.sound-options::backdrop {
+  background: #00000040;
+  backdrop-filter: blur(4px);
 }
 .sound-options-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 8px 4px;
+  align-items: flex-start;
+  padding: 24px 24px 18px;
+}
+.sound-options-heading h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.7px;
+}
+.sound-options-heading p {
+  margin: 6px 0 0;
+  font-size: 12px;
   color: var(--muted);
-  font-size: 10px;
 }
 .sound-options-heading button {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: var(--text);
+  background: var(--hover);
 }
-.sound-option {
+.sound-library-tools {
+  padding: 0 24px;
+}
+.sound-search {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--hover);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  color: var(--muted);
+}
+.sound-search:focus-within {
+  border-color: var(--text);
+}
+.sound-search input {
   width: 100%;
-  padding: 8px;
-  border-radius: 6px;
-  text-align: left;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
 }
-.sound-option > span {
-  display: grid;
-  gap: 2px;
+.sound-families {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 12px;
 }
-.sound-option strong {
+.sound-families button {
+  padding: 7px 11px;
+  min-height: 34px;
+  border-radius: 7px;
+  color: var(--muted);
   font-size: 11px;
-  font-weight: 500;
 }
-.sound-option small {
+.sound-families button[aria-pressed="true"] {
+  background: var(--text);
+  color: var(--panel);
+}
+.sound-library-results {
+  padding: 16px 24px 10px;
+  color: var(--muted);
+  font-size: 10px;
+  font-family: "IBM Plex Mono", monospace;
+}
+.sound-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-content: start;
+  gap: 10px;
+  padding: 2px 24px 20px;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.sound-library-footer {
+  padding: 14px 24px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 10px;
+}
+.sound-empty {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  padding: 24px 0;
+  font-size: 13px;
+}
+.sound-option {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  width: 100%;
+  min-height: 116px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--text);
+  text-align: left;
+  transition:
+    background 140ms,
+    border-color 140ms;
+}
+.sound-option-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 20px;
+  margin-bottom: 5px;
+}
+.sound-option-top > span {
   font-size: 9px;
   color: var(--muted);
 }
-.sound-option:hover,
-.sound-option[aria-pressed="true"] {
+.sound-option-top > svg:last-child:not(.sound-wave-icon) {
+  margin-left: auto;
+}
+.sound-wave-icon {
+  width: 40px;
+  height: 18px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.25px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.sound-option strong {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.25;
+}
+.sound-option small {
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.sound-option:hover {
   background: var(--hover);
+  border-color: var(--muted);
+}
+.sound-option[aria-pressed="true"] {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--panel);
+}
+.sound-option[aria-pressed="true"] small,
+.sound-option[aria-pressed="true"] .sound-option-top > span {
+  color: var(--panel);
+  opacity: 0.75;
+}
+@media (max-width: 600px) {
+  .sound-options {
+    max-width: calc(100vw - 24px);
+    max-height: calc(100dvh - 24px);
+    border-radius: 14px;
+  }
+  .sound-options-heading {
+    padding: 18px 16px 14px;
+  }
+  .sound-library-tools {
+    padding: 0 16px;
+  }
+  .sound-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 2px 16px 16px;
+  }
+  .sound-library-results {
+    padding: 12px 16px 8px;
+  }
+  .sound-library-footer {
+    padding: 12px 16px;
+    font-size: 9px;
+  }
+  .sound-option {
+    padding: 11px;
+    min-height: 130px;
+  }
+  .sound-option-top > span {
+    display: none;
+  }
+}
+@media (max-height: 450px) {
+  .sound-options-heading {
+    padding-top: 12px;
+    padding-bottom: 8px;
+  }
+  .sound-options-heading p,
+  .sound-library-footer {
+    display: none;
+  }
+  .sound-library-results {
+    padding-top: 8px;
+  }
 }
 @keyframes sound-roll-down {
   from {
@@ -2637,8 +2822,10 @@ body:has(.simple-app) {
 }
 @media (prefers-reduced-motion: reduce) {
   .sound-wheel-strip,
-  .sound-options {
+  .sound-options,
+  .sound-option {
     animation: none;
+    transition: none;
   }
 }
 .equation-bounds {
@@ -2795,11 +2982,6 @@ body:has(.simple-app) {
   }
   .equation-speed input {
     width: 56px;
-  }
-  .sound-options {
-    left: 0;
-    right: auto;
-    transform-origin: bottom left;
   }
   .equation-header {
     padding: 16px 22px;
