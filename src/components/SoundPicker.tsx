@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { ChevronUp, ChevronDown, Expand, Dices } from "lucide-react";
 import { SoundLibrary } from "./SoundLibrary";
@@ -16,6 +16,8 @@ export function SoundPicker({
   onChange: (id: SoundId) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [hintDismissed, setHintDismissed] = useState(false);
+  const hintId = useId();
   const [motion, setMotion] = useState({ serial: 0, direction: "down" });
   const [spin, setSpin] = useState<Spin | null>(null);
   const spinRef = useRef<Spin | null>(null),
@@ -95,6 +97,7 @@ export function SoundPicker({
       className="sound-picker"
       ref={root}
       onKeyDown={(e) => {
+        if (e.key === "Escape") setHintDismissed(true);
         if (
           (e.key === "ArrowUp" || e.key === "ArrowDown") &&
           (e.target as HTMLElement).closest(".sound-wheel")
@@ -105,71 +108,81 @@ export function SoundPicker({
       }}
     >
       <div
-        className="sound-wheel"
-        role="group"
-        aria-label="Sound selector"
-        aria-busy={!!spin}
-        data-spinning={!!spin}
+        className="sound-wheel-control"
+        data-hint-hidden={hintDismissed || !!spin || open}
+        onMouseEnter={() => setHintDismissed(false)}
+        onFocusCapture={() => setHintDismissed(false)}
       >
-        <button
-          className="sound-wheel-random"
-          aria-label="Random sound"
-          title={`Random sound · ${current.name}`}
-          disabled={!!spin}
-          onClick={randomize}
+        <div
+          className="sound-wheel"
+          role="group"
+          aria-label="Sound selector"
+          aria-busy={!!spin}
+          data-spinning={!!spin}
         >
-          {!spin && <Dices size={13} />}
-        </button>
-        <div className="sound-wheel-window" aria-hidden="true">
-          {spin ? (
-            <div
-              className="sound-spin-strip"
-              style={
-                {
-                  "--sound-spin-end": `${-spin.steps * 20 - 4}px`,
-                  "--sound-spin-duration": `${spinDuration}ms`,
-                } as CSSProperties
-              }
-              onAnimationEnd={(e) => {
-                if (e.animationName === "sound-spin") finishSpin();
-              }}
-            >
-              {spin.labels.map((label, i) => (
-                <span key={i}>{label}</span>
-              ))}
-            </div>
-          ) : (
-            <div
-              className="sound-wheel-strip"
-              key={motion.serial}
-              data-direction={motion.direction}
-            >
-              <span>
-                {sounds[(index - 1 + sounds.length) % sounds.length].name}
-              </span>
-              <strong>{current.name}</strong>
-              <span>{sounds[(index + 1) % sounds.length].name}</span>
-            </div>
-          )}
+          <button
+            className="sound-wheel-random"
+            aria-label="Random sound"
+            aria-describedby={hintId}
+            disabled={!!spin}
+            onClick={randomize}
+          >
+            {!spin && <Dices size={13} />}
+          </button>
+          <div className="sound-wheel-window" aria-hidden="true">
+            {spin ? (
+              <div
+                className="sound-spin-strip"
+                style={
+                  {
+                    "--sound-spin-end": `${-spin.steps * 20 - 4}px`,
+                    "--sound-spin-duration": `${spinDuration}ms`,
+                  } as CSSProperties
+                }
+                onAnimationEnd={(e) => {
+                  if (e.animationName === "sound-spin") finishSpin();
+                }}
+              >
+                {spin.labels.map((label, i) => (
+                  <span key={i}>{label}</span>
+                ))}
+              </div>
+            ) : (
+              <div
+                className="sound-wheel-strip"
+                key={motion.serial}
+                data-direction={motion.direction}
+              >
+                <span>
+                  {sounds[(index - 1 + sounds.length) % sounds.length].name}
+                </span>
+                <strong>{current.name}</strong>
+                <span>{sounds[(index + 1) % sounds.length].name}</span>
+              </div>
+            )}
+          </div>
+          <button
+            className="sound-wheel-up"
+            aria-label="Previous sound"
+            aria-describedby={hintId}
+            disabled={!!spin}
+            onClick={() => roll(-1)}
+          >
+            <ChevronUp size={10} />
+          </button>
+          <button
+            className="sound-wheel-down"
+            aria-label="Next sound"
+            aria-describedby={hintId}
+            disabled={!!spin}
+            onClick={() => roll(1)}
+          >
+            <ChevronDown size={10} />
+          </button>
         </div>
-        <button
-          className="sound-wheel-up"
-          aria-label="Previous sound"
-          title="Previous sound · scroll up"
-          disabled={!!spin}
-          onClick={() => roll(-1)}
-        >
-          <ChevronUp size={10} />
-        </button>
-        <button
-          className="sound-wheel-down"
-          aria-label="Next sound"
-          title="Next sound · scroll down"
-          disabled={!!spin}
-          onClick={() => roll(1)}
-        >
-          <ChevronDown size={10} />
-        </button>
+        <div className="sound-tooltip" role="tooltip" id={hintId}>
+          {current.description}
+        </div>
       </div>
       <span className="sr-only" role="status">
         Sound: {current.name}

@@ -27,18 +27,36 @@ test("only the right arrows step through sounds; hovering the title reveals its 
   }
   await page.getByRole("button", { name: "Next sound", exact: true }).click();
   await expect(status).toHaveText("Sound: Deep electro");
+  await expect(page.getByRole("tooltip")).toHaveText(
+    "Electro lead, one octave deeper",
+  );
   await page
     .getByRole("button", { name: "Previous sound", exact: true })
     .click();
   await expect(status).toHaveText("Sound: Electro lead");
   await random.hover();
   await expect(random.locator("svg")).toHaveCSS("opacity", "1");
+  const tooltip = page.getByRole("tooltip");
+  await expect(tooltip).toBeVisible();
+  await expect(tooltip).toHaveText("Bright, filtered saw");
+  await tooltip.hover();
+  await expect(tooltip).toBeVisible();
+  await random.hover();
+  await page.keyboard.press("Escape");
+  await expect(tooltip).toBeHidden();
+  await page.mouse.move(0, 0);
+  await random.hover();
+  await expect(tooltip).toBeVisible();
+  await expect(tooltip).toHaveCSS("opacity", "1");
   await page.screenshot({ path: ".local/sound-dice-hover.png" });
+  await page.locator(":focus").evaluate((node) => (node as HTMLElement).blur());
   await page.mouse.move(0, 0);
   await expect(random.locator("svg")).toHaveCSS("opacity", "0");
+  await expect(tooltip).toBeHidden();
   await page.keyboard.press("Tab");
   await random.focus();
   await expect(random.locator("svg")).toHaveCSS("opacity", "1");
+  await expect(tooltip).toBeVisible();
 });
 
 test("random sound spins quickly then slows and lands; audio changes only once at landing without restarting its clock", async ({

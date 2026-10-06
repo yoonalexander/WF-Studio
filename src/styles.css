@@ -2469,6 +2469,48 @@ body:has(.simple-app) {
   gap: 4px;
   color: var(--text);
 }
+.sound-wheel-control {
+  position: relative;
+  flex-shrink: 0;
+}
+.sound-tooltip {
+  position: absolute;
+  z-index: 20;
+  bottom: calc(100% + 10px);
+  left: 0;
+  width: min(250px, calc(100vw - 80px));
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: 0 5px 18px #00000018;
+  font-size: 11px;
+  line-height: 1.6;
+  text-align: left;
+  white-space: normal;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(4px);
+  transition:
+    opacity 140ms,
+    transform 140ms,
+    visibility 140ms;
+}
+.sound-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  height: 12px;
+}
+.sound-wheel-control:not([data-hint-hidden="true"]):is(:hover, :focus-within)
+  .sound-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
 .sound-wheel {
   position: relative;
   width: 148px;
@@ -2904,6 +2946,7 @@ body:has(.simple-app) {
 }
 @media (prefers-reduced-motion: reduce) {
   .sound-wheel-strip,
+  .sound-tooltip,
   .sound-spin-strip,
   .sound-wheel-random svg,
   .sound-wheel-strip > strong,
