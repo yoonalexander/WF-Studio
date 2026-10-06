@@ -19,7 +19,6 @@ export function ScaleKnob({
         x: number;
         y: number;
         lastX: number;
-        lastY: number;
         value: number;
         pointer: number;
         moved: boolean;
@@ -80,7 +79,7 @@ export function ScaleKnob({
         aria-valuetext={`From ${-value} to ${value}`}
         aria-describedby="scale-help"
         tabIndex={0}
-        title="Scroll or swipe to turn. Click the number to type."
+        title="Scroll or drag left/right to turn. Click the number to type."
         onKeyDown={(event) => {
           if (event.target !== event.currentTarget) return;
           const delta = (
@@ -119,7 +118,6 @@ export function ScaleKnob({
             x: event.clientX,
             y: event.clientY,
             lastX: event.clientX,
-            lastY: event.clientY,
             value,
             pointer: event.pointerId,
             moved: false,
@@ -134,15 +132,12 @@ export function ScaleKnob({
           )
             return;
           gesture.moved = suppressClick.current = true;
-          const dx = event.clientX - gesture.lastX,
-            dy = event.clientY - gesture.lastY;
-          // Follow the dominant direction, so diagonal motion never doubles
-          // sensitivity. Incremental movement reverses immediately at zero.
-          const delta = Math.abs(dx) > Math.abs(dy) ? -dx : dy;
-          gesture.value = scrollScale(gesture.value, delta * 6);
+          const dx = event.clientX - gesture.lastX;
+          // Only horizontal movement turns the dial. Incremental movement
+          // reverses immediately at zero, even outside the dial.
+          gesture.value = scrollScale(gesture.value, -dx * 6);
           gesture.lastX = event.clientX;
-          gesture.lastY = event.clientY;
-          onChange(gesture.value);
+          if (dx !== 0) onChange(gesture.value);
         }}
         onPointerUp={(event) => {
           const gesture = drag.current;

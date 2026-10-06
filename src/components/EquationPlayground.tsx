@@ -387,7 +387,7 @@ export function EquationPlayground({ onStudio }: { onStudio: () => void }) {
                 />
                 <span className="sr-only" id="scale-help">
                   Scroll up to increase; down to decrease. Click the number to
-                  edit. Swipe up/right to increase; down/left to decrease. Arrow
+                  edit. Swipe right to increase; left to decrease. Arrow
                   keys also work. X sets the playback range. Sound plays only
                   while the dot is inside the visible Y range.
                 </span>

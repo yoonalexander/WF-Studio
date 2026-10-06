@@ -7,7 +7,7 @@ test.describe("mobile knob gestures", () => {
     isMobile: true,
     viewport: { width: 320, height: 720 },
   });
-  test("touch swipes work from the number in all four directions, outside the dial, and reverse immediately at zero", async ({
+  test("touch swipes use only horizontal movement, work outside the dial, and reverse immediately at zero", async ({
     page,
     context,
   }) => {
@@ -30,10 +30,12 @@ test.describe("mobile knob gestures", () => {
         exact: true,
       });
       for (const [dx, dy, expected] of [
-        [0, -40, "7.4"],
+        [0, -40, "5"],
         [40, 0, "7.4"],
-        [0, 40, "2.6"],
+        [0, 40, "5"],
         [-40, 0, "2.6"],
+        [40, 60, "7.4"],
+        [-40, -60, "2.6"],
       ] as const) {
         await reset(axis);
         const box = (await dial.boundingBox())!;
@@ -269,7 +271,7 @@ test("tan(x²/3) matches a deliberate symmetric view; the two dial designs fit l
     const box = (await dial.boundingBox())!;
     await page.mouse.move(box.x + 3, box.y + 32);
     await page.mouse.down();
-    await page.mouse.move(box.x + 3, box.y + 22);
+    await page.mouse.move(box.x + 13, box.y + 32);
     await page.mouse.up();
     await expect(dial).toHaveAttribute("aria-valuenow", "5.6");
     await enterScale(page, "Y", "5");
