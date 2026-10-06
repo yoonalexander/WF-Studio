@@ -118,7 +118,7 @@ export function SoundPicker({
           disabled={!!spin}
           onClick={randomize}
         >
-          <Dices size={13} />
+          {!spin && <Dices size={13} />}
         </button>
         <div className="sound-wheel-window" aria-hidden="true">
           {spin ? (

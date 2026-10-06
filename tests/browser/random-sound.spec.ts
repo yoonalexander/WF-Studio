@@ -102,6 +102,7 @@ test("random sound spins quickly then slows and lands; audio changes only once a
     "aria-busy",
     "true",
   );
+  await expect(page.locator(".sound-wheel-random svg")).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: "Next sound", exact: true }),
   ).toBeDisabled();
@@ -131,6 +132,7 @@ test("random sound spins quickly then slows and lands; audio changes only once a
     `Sound: ${target.name}`,
   );
   await expect(spin).toHaveCount(0);
+  await expect(page.locator(".sound-wheel-random svg")).toHaveCount(1);
   await expect(
     page.getByRole("button", { name: "Next sound", exact: true }),
   ).toBeEnabled();
@@ -217,10 +219,12 @@ test.describe("touch sound controls", () => {
       "aria-busy",
       "true",
     );
+    await expect(random.locator("svg")).toHaveCount(0);
     await expect(page.locator(".sound-wheel")).toHaveAttribute(
       "aria-busy",
       "false",
     );
+    await expect(random.locator("svg")).toHaveCSS("opacity", "1");
     await expect(page.locator(".sound-picker [role=status]")).not.toHaveText(
       "Sound: Electro lead",
     );
