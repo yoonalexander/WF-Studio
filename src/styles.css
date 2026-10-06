@@ -2479,6 +2479,7 @@ body:has(.simple-app) {
   overflow: hidden;
 }
 .sound-wheel-window {
+  width: calc(100% - 28px);
   height: 100%;
   overflow: hidden;
   pointer-events: none;
@@ -2494,42 +2495,130 @@ body:has(.simple-app) {
 .sound-wheel-strip[data-direction="up"] {
   animation-name: sound-roll-up;
 }
+.sound-wheel-strip[data-direction="still"] {
+  animation: none;
+}
 .sound-wheel-strip > span {
   height: 15px;
   line-height: 15px;
   font-size: 9px;
   color: var(--muted);
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .sound-wheel-strip > strong {
   height: 20px;
   line-height: 20px;
   font-size: 11px;
   font-weight: 500;
-  max-width: calc(100% - 22px);
+  max-width: 100%;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  transition:
+    transform 160ms,
+    max-width 160ms;
+}
+.sound-wheel-random {
+  position: absolute;
+  z-index: 1;
+  top: 15px;
+  left: 0;
+  right: 28px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  padding-left: 13px;
+  color: var(--text);
+}
+.sound-wheel-random svg {
+  opacity: 0;
+  transform: rotate(-30deg) scale(0.7);
+  transition:
+    opacity 160ms,
+    transform 160ms;
+}
+.sound-wheel-random:hover svg,
+.sound-wheel-random:focus-visible svg {
+  opacity: 1;
+  transform: rotate(0) scale(1);
+}
+.sound-wheel-random:hover ~ .sound-wheel-window .sound-wheel-strip > strong,
+.sound-wheel-random:focus-visible
+  ~ .sound-wheel-window
+  .sound-wheel-strip
+  > strong {
+  transform: translateX(17px);
+  max-width: calc(100% - 17px);
+}
+.sound-spin-strip {
+  padding-left: 13px;
+  transform: translateY(-4px);
+  animation: sound-spin var(--sound-spin-duration)
+    cubic-bezier(0.12, 0.7, 0.12, 1) both;
+}
+.sound-wheel-random:hover ~ .sound-wheel-window .sound-spin-strip,
+.sound-wheel-random:focus-visible ~ .sound-wheel-window .sound-spin-strip {
+  padding-left: 30px;
+}
+.sound-spin-strip > span {
+  display: block;
+  height: 20px;
+  line-height: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+@keyframes sound-spin {
+  0% {
+    transform: translateY(-4px);
+    filter: blur(0);
+  }
+  15% {
+    filter: blur(1px);
+  }
+  75% {
+    filter: blur(0.3px);
+  }
+  100% {
+    transform: translateY(var(--sound-spin-end));
+    filter: blur(0);
+  }
+}
+@media (hover: none), (pointer: coarse) {
+  .sound-spin-strip {
+    padding-left: 30px;
+  }
+  .sound-wheel-random svg {
+    opacity: 1;
+    transform: none;
+  }
+  .sound-wheel-strip > strong {
+    transform: translateX(17px);
+    max-width: calc(100% - 17px);
+  }
 }
 .sound-wheel-up,
 .sound-wheel-down {
   position: absolute;
   right: 0;
-  left: 0;
+  width: 28px;
   display: flex;
-  justify-content: flex-end;
-  padding-right: 10px;
+  justify-content: center;
+  align-items: center;
   color: var(--muted);
 }
 .sound-wheel-up {
   top: 0;
-  height: 17px;
-  align-items: center;
+  height: 26px;
 }
 .sound-wheel-down {
-  top: 17px;
+  top: 26px;
   bottom: 0;
-  align-items: flex-end;
-  padding-bottom: 4px;
 }
 .sound-wheel button:hover {
   color: var(--text);
@@ -2822,6 +2911,9 @@ body:has(.simple-app) {
 }
 @media (prefers-reduced-motion: reduce) {
   .sound-wheel-strip,
+  .sound-spin-strip,
+  .sound-wheel-random svg,
+  .sound-wheel-strip > strong,
   .sound-options,
   .sound-option {
     animation: none;

@@ -1,8 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronUp, ChevronDown, Expand } from "lucide-react";
+import type { CSSProperties } from "react";
+import { ChevronUp, ChevronDown, Expand, Dices } from "lucide-react";
 import { SoundLibrary } from "./SoundLibrary";
 import { sounds, soundPreset } from "../sounds";
 import type { SoundId } from "../sounds";
+
+const spinDuration = 1050;
+type Spin = { target: SoundId; steps: number; labels: string[] };
 
 export function SoundPicker({
   value,
@@ -13,17 +17,63 @@ export function SoundPicker({
 }) {
   const [open, setOpen] = useState(false);
   const [motion, setMotion] = useState({ serial: 0, direction: "down" });
+  const [spin, setSpin] = useState<Spin | null>(null);
+  const spinRef = useRef<Spin | null>(null),
+    changeRef = useRef(onChange);
+  changeRef.current = onChange;
   const root = useRef<HTMLDivElement>(null),
     expand = useRef<HTMLButtonElement>(null);
   const current = soundPreset(value),
     index = sounds.findIndex((sound) => sound.id === current.id);
   const roll = (direction: number) => {
+    if (spinRef.current) return;
     onChange(sounds[(index + direction + sounds.length) % sounds.length].id);
     setMotion((m) => ({
       serial: m.serial + 1,
       direction: direction > 0 ? "down" : "up",
     }));
   };
+  const finishSpin = () => {
+    const pending = spinRef.current;
+    if (!pending) return;
+    spinRef.current = null;
+    setSpin(null);
+    changeRef.current(pending.target);
+    // The final row is already centered; don't roll it a second time.
+    setMotion((m) => ({ serial: m.serial + 1, direction: "still" }));
+  };
+  const cancelSpin = () => {
+    spinRef.current = null;
+    setSpin(null);
+  };
+  const randomize = () => {
+    if (spinRef.current) return;
+    // Each other sound is equally likely, with no immediate repeat.
+    const offset = 1 + Math.floor(Math.random() * (sounds.length - 1));
+    const target = sounds[(index + offset) % sounds.length].id;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      onChange(target);
+      setMotion((m) => ({ serial: m.serial + 1, direction: "still" }));
+      return;
+    }
+    const steps = sounds.length + offset;
+    const pending = {
+      target,
+      steps,
+      labels: Array.from(
+        { length: steps + 3 },
+        (_, i) => sounds[(index + i - 1 + sounds.length) % sounds.length].name,
+      ),
+    };
+    spinRef.current = pending;
+    setSpin(pending);
+  };
+  useEffect(() => {
+    if (!spin) return;
+    // Finish even if motion preferences change or a browser omits animationend.
+    const timer = window.setTimeout(finishSpin, spinDuration + 80);
+    return () => window.clearTimeout(timer);
+  }, [spin]);
   const rollRef = useRef(roll);
   rollRef.current = roll;
   useEffect(() => {
@@ -54,24 +104,59 @@ export function SoundPicker({
         }
       }}
     >
-      <div className="sound-wheel" role="group" aria-label="Sound selector">
+      <div
+        className="sound-wheel"
+        role="group"
+        aria-label="Sound selector"
+        aria-busy={!!spin}
+        data-spinning={!!spin}
+      >
+        <button
+          className="sound-wheel-random"
+          aria-label="Random sound"
+          title={`Random sound · ${current.name}`}
+          disabled={!!spin}
+          onClick={randomize}
+        >
+          <Dices size={13} />
+        </button>
         <div className="sound-wheel-window" aria-hidden="true">
-          <div
-            className="sound-wheel-strip"
-            key={motion.serial}
-            data-direction={motion.direction}
-          >
-            <span>
-              {sounds[(index - 1 + sounds.length) % sounds.length].name}
-            </span>
-            <strong>{current.name}</strong>
-            <span>{sounds[(index + 1) % sounds.length].name}</span>
-          </div>
+          {spin ? (
+            <div
+              className="sound-spin-strip"
+              style={
+                {
+                  "--sound-spin-end": `${-spin.steps * 20 - 4}px`,
+                  "--sound-spin-duration": `${spinDuration}ms`,
+                } as CSSProperties
+              }
+              onAnimationEnd={(e) => {
+                if (e.animationName === "sound-spin") finishSpin();
+              }}
+            >
+              {spin.labels.map((label, i) => (
+                <span key={i}>{label}</span>
+              ))}
+            </div>
+          ) : (
+            <div
+              className="sound-wheel-strip"
+              key={motion.serial}
+              data-direction={motion.direction}
+            >
+              <span>
+                {sounds[(index - 1 + sounds.length) % sounds.length].name}
+              </span>
+              <strong>{current.name}</strong>
+              <span>{sounds[(index + 1) % sounds.length].name}</span>
+            </div>
+          )}
         </div>
         <button
           className="sound-wheel-up"
           aria-label="Previous sound"
           title="Previous sound · scroll up"
+          disabled={!!spin}
           onClick={() => roll(-1)}
         >
           <ChevronUp size={10} />
@@ -80,6 +165,7 @@ export function SoundPicker({
           className="sound-wheel-down"
           aria-label="Next sound"
           title="Next sound · scroll down"
+          disabled={!!spin}
           onClick={() => roll(1)}
         >
           <ChevronDown size={10} />
@@ -95,7 +181,10 @@ export function SoundPicker({
         title="Choose a sound"
         aria-expanded={open}
         aria-controls="sound-options"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          cancelSpin();
+          setOpen((v) => !v);
+        }}
       >
         <Expand size={14} />
       </button>
