@@ -27,6 +27,8 @@ export class ContinuousAudio {
   private speed = 1;
   private reveal = false;
   private revealed = 0;
+  private acidLastValue?: number;
+  private acidEnvelopeStarted = 0;
   private generation = 0;
   private extent() {
     return this.xExtent ?? this.project?.loop.endBeat ?? 0;
@@ -98,6 +100,7 @@ export class ContinuousAudio {
     if (!this.context || !this.oscillator || !this.filter || !this.shaper)
       return;
     const preset = soundPreset(this.sound);
+    this.acidLastValue = undefined;
     if (preset.waveform === "custom") {
       const real = new Float32Array(preset.harmonics.length);
       const imaginary = Float32Array.from(preset.harmonics);
@@ -175,7 +178,35 @@ export class ContinuousAudio {
         440 *
         2 **
           ((track.baseNote - 69 + preset.octave + clamp(value, -48, 48)) / 12);
-      this.oscillator.frequency.setTargetAtTime(frequency, now, 0.008);
+      this.oscillator.frequency.setTargetAtTime(
+        frequency,
+        now,
+        preset.id === "acid-303" ? preset.glide : 0.008,
+      );
+    }
+    if (preset.id === "acid-303" && this.filter) {
+      // The equation supplies articulation: pitch jumps and returns from a
+      // rest open the filter. Smooth curves glide without an imposed grid.
+      if (
+        valid &&
+        (this.acidLastValue === undefined ||
+          Math.abs(value - this.acidLastValue) >= 0.75)
+      )
+        this.acidEnvelopeStarted = now;
+      if (valid) {
+        const envelope = Math.exp(
+          -(now - this.acidEnvelopeStarted) / preset.envelopeDecay,
+        );
+        const cutoff =
+          preset.cutoff * 2 ** (clamp(value, -24, 24) / 12) +
+          preset.envelopeRange * envelope;
+        this.filter.frequency.setTargetAtTime(
+          Math.min(7000, cutoff),
+          now,
+          0.01,
+        );
+      }
+      this.acidLastValue = valid ? value : undefined;
     }
     this.gain.gain.setTargetAtTime(
       valid && !this.changingSound ? preset.level * this.volume : 0,
