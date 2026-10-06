@@ -27,15 +27,25 @@ test("the sound library is a searchable, keyboard-accessible grid that fits ligh
     sounds.filter((s) => s.category === "Bass").length,
   );
   await dialog.getByRole("button", { name: "All", exact: true }).click();
+  await dialog
+    .getByRole("searchbox", { name: "Search sounds" })
+    .fill("Minimoog");
+  await expect(dialog.locator(".sound-option")).toHaveCount(2);
+  await expect(
+    dialog.getByRole("button", { name: "Ladder bass", exact: true }),
+  ).toContainText("Inspired by Moog Minimoog.");
+  await expect(
+    dialog.getByRole("button", { name: "Ladder lead", exact: true }),
+  ).toContainText("Inspired by Moog Minimoog.");
   await dialog.getByRole("searchbox", { name: "Search sounds" }).fill("FM");
   await expect(
-    dialog.getByRole("button", { name: "DX7 electric piano", exact: true }),
+    dialog.getByRole("button", { name: "FM tine piano", exact: true }),
   ).toBeVisible();
   await expect(
     dialog.getByRole("button", { name: "FM bell", exact: true }),
   ).toBeVisible();
   await expect(
-    dialog.getByRole("button", { name: "Juno chorus pad", exact: true }),
+    dialog.getByRole("button", { name: "Chorus pad", exact: true }),
   ).toHaveCount(0);
   await dialog
     .getByRole("searchbox", { name: "Search sounds" })
@@ -78,7 +88,7 @@ test("the sound library is a searchable, keyboard-accessible grid that fits ligh
     }));
     expect(colors.background).not.toBe(colors.color);
     await dialog
-      .getByRole("button", { name: "808 sub bass", exact: true })
+      .getByRole("button", { name: "Long sub bass", exact: true })
       .focus();
     await page.keyboard.press("Tab");
     await expect(
@@ -232,7 +242,7 @@ test("every library sound produces real sustained audio; layered, FM and effect 
   }
   expect((await state()).starts).toBe(1);
   for (const name of [
-    "DX7 electric piano",
+    "FM tine piano",
     "Supersaw",
     "Dub techno chord",
     "Vocoder-style voice",

@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test("303 Acid bass has a deep sustained saw, resonant equation-driven sweeps, glide, silence and saved selection", async ({
+test("Resonant acid bass has a deep sustained saw, resonant equation-driven sweeps, glide, silence and saved selection", async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -96,7 +96,7 @@ test("303 Acid bass has a deep sustained saw, resonant equation-driven sweeps, g
   await clear();
   await page.getByRole("button", { name: "Next sound", exact: true }).click();
   await expect(page.locator(".sound-picker [role=status]")).toHaveText(
-    "Sound: 303 Acid bass",
+    "Sound: Resonant acid bass",
   );
   await expect
     .poll(async () => (await state()).cutoffs.some((c) => c > 2500))
@@ -163,7 +163,7 @@ test("303 Acid bass has a deep sustained saw, resonant equation-driven sweeps, g
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   await page.reload();
   await expect(page.locator(".sound-picker [role=status]")).toHaveText(
-    "Sound: 303 Acid bass",
+    "Sound: Resonant acid bass",
   );
   await page.getByRole("button", { name: "Play", exact: true }).click();
   await expect.poll(async () => (await state()).q).toBeCloseTo(6.5, 1);

@@ -186,7 +186,7 @@ test("opening the library cancels a pending spin; reduced motion chooses immedia
     Math.random = () => 0;
   });
   await random.click();
-  await expect(status).toHaveText("Sound: Minimoog bass");
+  await expect(status).toHaveText("Sound: Ladder bass");
   await expect(page.locator(".sound-spin-strip")).toHaveCount(0);
   // Maximum draw chooses the previous sound, wrapping at the beginning.
   await page
@@ -197,7 +197,7 @@ test("opening the library cancels a pending spin; reduced motion chooses immedia
     Math.random = () => 0.999999;
   });
   await random.click();
-  await expect(status).toHaveText("Sound: 808 sub bass");
+  await expect(status).toHaveText("Sound: Long sub bass");
   await page.evaluate(() => {
     Math.random = () => 0;
   });

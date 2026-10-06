@@ -4,9 +4,10 @@ import type { SoundPreset } from "./sounds";
 export const iconicSounds = [
   {
     id: "minimoog-bass",
-    name: "Minimoog bass",
+    name: "Ladder bass",
     category: "Bass",
-    description: "Thick saws, sub weight and a warm growl",
+    description:
+      "Inspired by Moog Minimoog. Thick saws, sub weight and a warm growl",
     waveform: "sawtooth",
     cutoff: 620,
     resonance: 1.5,
@@ -24,9 +25,10 @@ export const iconicSounds = [
   },
   {
     id: "dx7-ep",
-    name: "DX7 electric piano",
+    name: "FM tine piano",
     category: "Keys & bells",
-    description: "Glassy FM tine with a soft electric body",
+    description:
+      "Inspired by Yamaha DX7. Glassy FM tine with a soft electric body",
     waveform: "sine",
     cutoff: 8500,
     resonance: 0.5,
@@ -43,9 +45,10 @@ export const iconicSounds = [
   },
   {
     id: "juno-pad",
-    name: "Juno chorus pad",
+    name: "Chorus pad",
     category: "Pad",
-    description: "Silky pulse and saw with wide stereo chorus",
+    description:
+      "Inspired by Roland Juno. Silky pulse and saw with wide stereo chorus",
     waveform: "sawtooth",
     cutoff: 2100,
     resonance: 0.7,
@@ -64,9 +67,10 @@ export const iconicSounds = [
   },
   {
     id: "jupiter-brass",
-    name: "Jupiter brass",
+    name: "Analog brass",
     category: "Chords",
-    description: "Bright analog brass with an opening filter",
+    description:
+      "Inspired by Roland Jupiter. Bright analog brass with an opening filter",
     waveform: "sawtooth",
     cutoff: 1300,
     resonance: 1.3,
@@ -87,9 +91,10 @@ export const iconicSounds = [
   },
   {
     id: "prophet-pad",
-    name: "Prophet brass / pad",
+    name: "Drifting brass pad",
     category: "Pad",
-    description: "Warm drifting oscillators and soft brass",
+    description:
+      "Inspired by Sequential Prophet. Warm drifting oscillators and soft brass",
     waveform: "sawtooth",
     cutoff: 1700,
     resonance: 0.8,
@@ -110,9 +115,10 @@ export const iconicSounds = [
   },
   {
     id: "odyssey-lead",
-    name: "ARP Odyssey lead",
+    name: "Dual oscillator lead",
     category: "Lead",
-    description: "Biting dual oscillator lead with filter motion",
+    description:
+      "Inspired by ARP Odyssey. Biting dual oscillator lead with filter motion",
     waveform: "sawtooth",
     cutoff: 2200,
     resonance: 3,
@@ -129,9 +135,10 @@ export const iconicSounds = [
   },
   {
     id: "minimoog-lead",
-    name: "Minimoog lead",
+    name: "Ladder lead",
     category: "Lead",
-    description: "Smooth, powerful analog lead with glide",
+    description:
+      "Inspired by Moog Minimoog. Smooth, powerful analog lead with glide",
     waveform: "sawtooth",
     cutoff: 2600,
     resonance: 1,
@@ -148,9 +155,9 @@ export const iconicSounds = [
   },
   {
     id: "oberheim-brass",
-    name: "Oberheim brass",
+    name: "Wide analog brass",
     category: "Chords",
-    description: "Wide, bold saw brass in a major chord",
+    description: "Inspired by Oberheim. Wide, bold saw brass in a major chord",
     waveform: "sawtooth",
     cutoff: 4200,
     resonance: 0.6,
@@ -170,9 +177,10 @@ export const iconicSounds = [
   },
   {
     id: "sh101-bass",
-    name: "SH-101 bass",
+    name: "Pulse sub bass",
     category: "Bass",
-    description: "Punchy pulse, saw and sub oscillator",
+    description:
+      "Inspired by Roland SH-101. Punchy pulse, saw and sub oscillator",
     waveform: "square",
     cutoff: 700,
     resonance: 2,
@@ -192,9 +200,10 @@ export const iconicSounds = [
   },
   {
     id: "hoover",
-    name: "Alpha Juno Hoover",
+    name: "Rave stack lead",
     category: "Lead",
-    description: "Abrasive rave stack with sweeping pulse motion",
+    description:
+      "Inspired by Roland Alpha Juno Hoover. Abrasive rave stack with sweeping pulse motion",
     waveform: "sawtooth",
     cutoff: 5500,
     resonance: 1.5,
@@ -215,9 +224,10 @@ export const iconicSounds = [
   },
   {
     id: "m1-piano",
-    name: "M1 house piano",
+    name: "House piano",
     category: "Keys & bells",
-    description: "Bright house piano attack and rounded sustain",
+    description:
+      "Inspired by Korg M1. Bright house piano attack and rounded sustain",
     waveform: "custom",
     harmonics: [0, 1, 0.55, 0.32, 0.2, 0.12, 0.08],
     cutoff: 6200,
@@ -235,9 +245,10 @@ export const iconicSounds = [
   },
   {
     id: "m1-organ",
-    name: "M1 house organ",
+    name: "House organ",
     category: "Keys & bells",
-    description: "Hollow house organ with a percussive overtone",
+    description:
+      "Inspired by Korg M1. Hollow house organ with a percussive overtone",
     waveform: "custom",
     harmonics: [0, 1, 0.8, 0.12, 0.5, 0, 0.08, 0, 0.12],
     cutoff: 6200,
@@ -279,9 +290,9 @@ export const iconicSounds = [
   },
   {
     id: "ppg-pad",
-    name: "PPG wavetable pad",
+    name: "Metallic wavetable pad",
     category: "Pad",
-    description: "Evolving metallic wavetable harmonics",
+    description: "Inspired by PPG Wave. Evolving metallic wavetable harmonics",
     waveform: "sawtooth",
     cutoff: 5800,
     resonance: 0.8,
@@ -297,9 +308,10 @@ export const iconicSounds = [
   },
   {
     id: "d50-fantasia",
-    name: "D-50 Fantasia",
+    name: "Shimmer bell pad",
     category: "Pad",
-    description: "Bell attack over a shimmering digital pad",
+    description:
+      "Inspired by Roland D-50 Fantasia. Bell attack over a shimmering digital pad",
     waveform: "sine",
     cutoff: 7500,
     resonance: 0.5,
@@ -319,9 +331,9 @@ export const iconicSounds = [
   },
   {
     id: "dx7-bass",
-    name: "DX7 FM bass",
+    name: "Knock FM bass",
     category: "Bass",
-    description: "Sharp FM knock with a solid low body",
+    description: "Inspired by Yamaha DX7. Sharp FM knock with a solid low body",
     waveform: "sine",
     cutoff: 4800,
     resonance: 0.5,
@@ -470,9 +482,10 @@ export const iconicSounds = [
   },
   {
     id: "cs80-pad",
-    name: "CS-80 pad / brass",
+    name: "Blooming brass pad",
     category: "Pad",
-    description: "Mournful layered brass with a slow bloom",
+    description:
+      "Inspired by Yamaha CS-80. Mournful layered brass with a slow bloom",
     waveform: "sawtooth",
     cutoff: 1400,
     resonance: 1.2,
@@ -534,9 +547,10 @@ export const iconicSounds = [
   },
   {
     id: "sid",
-    name: "SID bass / lead",
+    name: "Gritty chip bass / lead",
     category: "Lead",
-    description: "Gritty pulse-width motion and crunchy filtering",
+    description:
+      "Inspired by Commodore SID. Gritty pulse-width motion and crunchy filtering",
     waveform: "square",
     cutoff: 1800,
     resonance: 2.5,
@@ -689,9 +703,10 @@ export const iconicSounds = [
   },
   {
     id: "808-sub",
-    name: "808 sub bass",
+    name: "Long sub bass",
     category: "Bass",
-    description: "Long low sine with a short pitched knock",
+    description:
+      "Inspired by Roland TR-808. Long low sine with a short pitched knock",
     waveform: "sine",
     cutoff: 950,
     resonance: 0.5,

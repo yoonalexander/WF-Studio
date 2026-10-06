@@ -104,8 +104,8 @@ export const sounds = [
   },
   {
     id: "acid-303",
-    name: "303 Acid bass",
-    description: "TB-303-inspired resonant saw and glide",
+    name: "Resonant acid bass",
+    description: "Inspired by Roland TB-303. Resonant saw and glide",
     category: "Bass",
     waveform: "sawtooth",
     cutoff: 480,
