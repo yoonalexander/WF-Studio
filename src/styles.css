@@ -2559,10 +2559,6 @@ body:has(.simple-app) {
   animation: sound-spin var(--sound-spin-duration)
     cubic-bezier(0.12, 0.7, 0.12, 1) both;
 }
-.sound-wheel-random:hover ~ .sound-wheel-window .sound-spin-strip,
-.sound-wheel-random:focus-visible ~ .sound-wheel-window .sound-spin-strip {
-  padding-left: 30px;
-}
 .sound-spin-strip > span {
   display: block;
   height: 20px;
@@ -2590,9 +2586,6 @@ body:has(.simple-app) {
   }
 }
 @media (hover: none), (pointer: coarse) {
-  .sound-spin-strip {
-    padding-left: 30px;
-  }
   .sound-wheel-random svg {
     opacity: 1;
     transform: none;

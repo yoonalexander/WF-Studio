@@ -96,6 +96,10 @@ test("random sound spins quickly then slows and lands; audio changes only once a
     .poll(async () => (await state()).frequency)
     .toBeCloseTo(261.625565, 0);
   const before = await state();
+  const labelLeft = await page
+    .locator(".sound-wheel-strip > span")
+    .first()
+    .evaluate((e) => e.getBoundingClientRect().left);
   const target = sounds[1 + Math.floor(0.5 * (sounds.length - 1))];
   await page.getByRole("button", { name: "Random sound", exact: true }).click();
   await expect(page.locator(".sound-wheel")).toHaveAttribute(
@@ -107,6 +111,12 @@ test("random sound spins quickly then slows and lands; audio changes only once a
     page.getByRole("button", { name: "Next sound", exact: true }),
   ).toBeDisabled();
   const spin = page.locator(".sound-spin-strip");
+  expect(
+    await spin
+      .locator("span")
+      .first()
+      .evaluate((e) => e.getBoundingClientRect().left),
+  ).toBeCloseTo(labelLeft, 1);
   await expect(spin).toHaveCSS("animation-name", "sound-spin");
   await expect(page.locator(".sound-picker [role=status]")).toHaveText(
     "Sound: Electro lead",
@@ -214,12 +224,22 @@ test.describe("touch sound controls", () => {
       exact: true,
     });
     await expect(random.locator("svg")).toHaveCSS("opacity", "1");
+    const labelLeft = await page
+      .locator(".sound-wheel-strip > span")
+      .first()
+      .evaluate((e) => e.getBoundingClientRect().left);
     await random.tap();
     await expect(page.locator(".sound-wheel")).toHaveAttribute(
       "aria-busy",
       "true",
     );
     await expect(random.locator("svg")).toHaveCount(0);
+    expect(
+      await page
+        .locator(".sound-spin-strip > span")
+        .first()
+        .evaluate((e) => e.getBoundingClientRect().left),
+    ).toBeCloseTo(labelLeft, 1);
     await expect(page.locator(".sound-wheel")).toHaveAttribute(
       "aria-busy",
       "false",
